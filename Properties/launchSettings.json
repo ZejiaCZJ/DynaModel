@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "DynaModel_v2": {
+      "commandName": "Executable",
+      "executablePath": "B:\\Rhinoceros\\System\\Rhino.exe",
+      "commandLineArgs": ""
+    }
+  }
+}

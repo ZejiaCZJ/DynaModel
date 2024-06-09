@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "dD63WC+l5dCIycRE+oxwm6m/uSuH/kXArBldL9OmQBB7AOoPOaCwLt2LQDHiFh8SDoDtKeiISURP0QjjqMN6PA==",
+  "success": true,
+  "projectFilePath": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Zejia Cai\\.nuget\\packages\\grasshopper\\7.13.21348.13001\\grasshopper.7.13.21348.13001.nupkg.sha512",
+    "C:\\Users\\Zejia Cai\\.nuget\\packages\\rhinocommon\\7.13.21348.13001\\rhinocommon.7.13.21348.13001.nupkg.sha512"
+  ],
+  "logs": []
+}

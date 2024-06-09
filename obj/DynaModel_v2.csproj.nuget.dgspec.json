@@ -1,0 +1,54 @@
+{
+  "format": 1,
+  "restore": {
+    "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj": {}
+  },
+  "projects": {
+    "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj",
+        "projectName": "DynaModel_v2",
+        "projectPath": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj",
+        "packagesPath": "C:\\Users\\Zejia Cai\\.nuget\\packages\\",
+        "outputPath": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\Zejia Cai\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net48"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net48": {
+            "targetAlias": "net48",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net48": {
+          "targetAlias": "net48",
+          "dependencies": {
+            "Grasshopper": {
+              "include": "Compile, Build",
+              "target": "Package",
+              "version": "[7.13.21348.13001, )"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.101\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

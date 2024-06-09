@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+	
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <Version>1.0</Version>
+    <Title>DynaModel_v2</Title>
+    <Description>Description of DynaModel_v2</Description>
+    <TargetExt>.gha</TargetExt>
+    <UseWpf>true</UseWpf>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Grasshopper" Version="7.13.21348.13001" IncludeAssets="compile;build" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Geometry\" />
+    <Folder Include="AirPipe\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="Light Pipe\PriorityQueue\Priority Queue.csproj" />
+  </ItemGroup>
+
+</Project>

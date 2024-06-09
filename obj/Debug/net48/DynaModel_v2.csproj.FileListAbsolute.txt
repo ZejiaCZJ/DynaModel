@@ -1,0 +1,10 @@
+B:\SFU Study Materials\CMPT415\DynaModel_v2\bin\Debug\net48\DynaModel_v2.gha
+B:\SFU Study Materials\CMPT415\DynaModel_v2\bin\Debug\net48\DynaModel_v2.pdb
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.csproj.AssemblyReference.cache
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.GeneratedMSBuildEditorConfig.editorconfig
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.AssemblyInfoInputs.cache
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.AssemblyInfo.cs
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.csproj.CoreCompileInputs.cache
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.sourcelink.json
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.gha
+B:\SFU Study Materials\CMPT415\DynaModel_v2\obj\Debug\net48\DynaModel_v2.pdb
