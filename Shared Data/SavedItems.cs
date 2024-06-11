@@ -14,6 +14,7 @@ namespace DynaModel_v2.SharedData
         private static int itemsCount;
         public static List<String> itemsNames;
         public static List<Guid> originalModelGuids;
+        public static Guid instanceID;
 
 
         /// <summary>
@@ -24,6 +25,7 @@ namespace DynaModel_v2.SharedData
               "This component contains the saved parameters that the user wants to add to the model",
               "DynaModel_v2", "Main")
         {
+            instanceID = this.InstanceGuid;
             items = new List<Item>();
             itemsCount = 0;
             itemsNames = new List<String>();
@@ -53,9 +55,6 @@ namespace DynaModel_v2.SharedData
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-
-            
-
             if (items.Count == 0)
             {
                 DA.SetDataList(0, itemsNames);
