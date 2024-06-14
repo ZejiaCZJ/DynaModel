@@ -26,6 +26,7 @@ namespace DynaModel_v2.Rotational_Motion
         ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
         private bool end_button_clicked;
         Brep cutter = new Brep();
+        private Guid originalCurrModelId = Guid.Empty;
 
         /// <summary>
         /// Initializes a new instance of the CreateCutter class.
@@ -140,6 +141,7 @@ namespace DynaModel_v2.Rotational_Motion
                     essentials.CutterPlane = cutterPlane;
                     essentials.CutterThickness = 3;
                     essentials.MainModel = currModelObjId;
+                    essentials.CurrModel = originalCurrModelId;
 
                     DA.SetData(0, essentials);
                 }
@@ -190,6 +192,7 @@ namespace DynaModel_v2.Rotational_Motion
                 }
 
                 #region Create interactive dots around the model body for users to select
+                originalCurrModelId = currModelObjId;
                 myDoc.Objects.Hide(currModelObjId, true);
                 currModelObjId = myDoc.Objects.AddBrep(currModel);
 

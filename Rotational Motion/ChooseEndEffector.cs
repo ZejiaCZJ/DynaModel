@@ -200,6 +200,7 @@ namespace DynaModel_v2.Rotational_Motion
                 }
 
                 essentials = original_essentials.Duplicate(original_essentials);
+                essentials.Speed = ratio;
 
                 //Copy cutter
                 ObjRef cutterObj = new ObjRef(myDoc, essentials.Cutter);
@@ -213,7 +214,7 @@ namespace DynaModel_v2.Rotational_Motion
 
                 #region Cut the main model
                 Brep[] cuttedBrep = Brep.CreateBooleanDifference(currModel, cutter, myDoc.ModelAbsoluteTolerance, false);
-                myDoc.Objects.Delete(essentials.Cutter, true);
+                myDoc.Objects.Hide(essentials.Cutter, true);
                 myDoc.Objects.Delete(essentials.MainModel, true);
                 List<Guid> cuttedBrepObjId = new List<Guid>();
                 foreach (var brep in cuttedBrep)

@@ -55,6 +55,9 @@ namespace DynaModel_v2.Rotational_Motion
 
             if (save)
             {
+                RhinoDoc.ActiveDoc.Objects.Hide(essentials.gearEssentials.Cutter, true);
+                RhinoDoc.ActiveDoc.Objects.Hide(essentials.gearEssentials.EndEffector, true);
+
                 if (essentials.Name != string.Empty)
                     SavedItems.items.Add(essentials);
                 //Return the Rhino view to its original look

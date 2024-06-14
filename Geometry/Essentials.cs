@@ -17,11 +17,14 @@ namespace DynaModel_v2.Geometry
     public class Essentials
     {
         private List<Guid> models;
+        private Guid currModel;
         private Guid mainModel;
         private Guid cutter;
         private Guid endEffector;
         private Plane cutterPlane;
         private double cutterThickness;
+        private double speed = 1;
+        
 
         
         
@@ -32,6 +35,10 @@ namespace DynaModel_v2.Geometry
         public double CutterThickness { get => cutterThickness; set => cutterThickness = value; }
 
         public Guid EndEffector { get => endEffector; set => endEffector = value; }
+
+        public Double Speed { get => speed; set => speed = value; }
+
+        public Guid CurrModel { get => currModel; set => currModel = value; }
 
         public Essentials()
         {
@@ -62,6 +69,8 @@ namespace DynaModel_v2.Geometry
             duplicate.endEffector = old.endEffector;
             duplicate.cutterPlane = old.cutterPlane.Clone();
             duplicate.cutterThickness= old.cutterThickness;
+            duplicate.speed = old.speed;
+            duplicate.currModel = old.currModel;
 
             return duplicate;
         }
