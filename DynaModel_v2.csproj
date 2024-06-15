@@ -16,7 +16,6 @@
   
   <ItemGroup>
     <Folder Include="Geometry\" />
-    <Folder Include="AirPipe\" />
   </ItemGroup>
   
   <ItemGroup>

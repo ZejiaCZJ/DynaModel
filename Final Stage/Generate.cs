@@ -40,15 +40,35 @@ namespace DynaModel_v2.Final_Stage
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            for(int i = 0; i < SavedItems.items.Count; i++)
+            bool generate = false;
+
+            if(!DA.GetData(0, ref generate))
+                return;
+
+            if(generate)
             {
                 GenerateHelper generateHelper = new GenerateHelper(out bool success);
-                if (SavedItems.items[i].Name == "Rotational Motion")
+                for (int i = 0; i < SavedItems.items.Count; i++)
                 {
-                    Item item = SavedItems.items[i];
-                    generateHelper.GenerateRotationalMotion(ref item, out List<Brep> subtrahends);
+                    if (SavedItems.items[i].Name == "Rotational Motion")
+                    {
+                        Item item = SavedItems.items[i];
+                        generateHelper.GenerateRotationalMotion(ref item, out List<Brep> subtrahends);
+                    }
+                    if (SavedItems.items[i].Name == "LED Light")
+                    {
+                        Item item = SavedItems.items[i];
+                        generateHelper.GenerateLightPipe(ref item, out List<Brep> subtrahends);
+                    }
+                    if (SavedItems.items[i].Name == "Air Pipe")
+                    {
+                        Item item = SavedItems.items[i];
+                        generateHelper.GenerateAirPipe(ref item, out List<Brep> subtrahends);
+                    }
                 }
             }
+
+            
         
         }
 
