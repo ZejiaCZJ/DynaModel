@@ -14,6 +14,7 @@ using Priority_Queue; //https://github.com/BlueRaja/High-Speed-Priority-Queue-fo
 using System.Linq;
 using System.Diagnostics.Eventing.Reader;
 using DynaModel_v2.SharedData;
+using System.Security.Cryptography;
 
 namespace DynaModel_v2.Light_Pipe
 {
@@ -26,6 +27,7 @@ namespace DynaModel_v2.Light_Pipe
         private List<PipeExit> pipeExitPts;
         int voxelSpace_offset;
         private static List<Brep> allPipes;
+        private List<Brep> ignorePipes;
         private List<Guid> allTempBoxesGuid;
         private static List<Curve> combinableLightPipeRoute;
         private static List<Brep> combinableLightPipe;
@@ -54,6 +56,7 @@ namespace DynaModel_v2.Light_Pipe
             combinableLightPipe = new List<Brep>();
             combinableLightPipeRoute = new List<Curve>();
             conductiveObjects = new List<InViewObject>();
+            ignorePipes = new List<Brep>();
 
             allTempBoxesGuid = new List<Guid>();
             currModelObjId = Guid.Empty;
@@ -255,6 +258,7 @@ namespace DynaModel_v2.Light_Pipe
                     #region Ask the user to select points to generate the area of the parameter
                     CurveList selected_area = new CurveList();
                     List<Brep> selected_box = new List<Brep>();
+                    List<Point3d> selected_pts = new List<Point3d>();
                     List<Guid> rectanglesGuid = new List<Guid>();
                     RhinoApp.KeyboardEvent += OnKeyboardEvent;
                     while (!endButtonClicked)
@@ -275,7 +279,7 @@ namespace DynaModel_v2.Light_Pipe
                             selectedPts.Add(tempPt);
 
                             // Display the selected area with red 2D bounding box
-                            BoundingBox box = new BoundingBox(x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5);
+                            BoundingBox box = new BoundingBox(x - 1, y - 1, z - 1, x + 1, y + 1, z + 1);
                             Intersection.BrepBrep(box.ToBrep(), currModel, myDoc.ModelAbsoluteTolerance, out Curve[] curve, out Point3d[] point);
                             foreach (var c in curve)
                             {
@@ -304,48 +308,49 @@ namespace DynaModel_v2.Light_Pipe
 
                     pts_Guid.Clear();
                     surfacePts.Clear();
-
-
-                    //Show the User interact parameter
-                    Brep customized_part = Brep.MergeBreps(selected_box.ToArray(), myDoc.ModelAbsoluteTolerance);
-                    Guid newPartGuid = myDoc.Objects.AddBrep(customized_part, redAttribute);
-                    myDoc.Views.Redraw();
                     #endregion
 
-                    #region Generate Pipe based on the required input and output of the parameter
-                    if (outputType.Equals("LED Light"))
+                    //Show the User interact parameter
+                    Brep[] customized_partBreps = Brep.CreateBooleanUnion(selected_box, myDoc.ModelAbsoluteTolerance);
+                    Point3d pipeExit = Point3d.Unset;
+                    foreach (Brep customized_part in customized_partBreps)
                     {
                         #region Get the line that don't combine all gears ---> bestRoute1
                         Point3d customized_part_center = customized_part.GetBoundingBox(true).Center;
-                        GetVoxelSpace(currModel, 1, customized_part);
+                        if(voxelSpace == null)
+                            GetVoxelSpace(currModel, 1, customized_part);
 
                         //Find the Pipe exit location
-                        if (pipeExitPts.Count == 0)
+                        if(pipeExit == Point3d.Unset)
                         {
-                            double base_z = boundingBox.Min.Z;
-                            double base_x = (boundingBox.Max.X - boundingBox.Min.X) / 2 + boundingBox.Min.X;
-                            double base_y = (boundingBox.Max.Y - boundingBox.Min.Y) / 2 + boundingBox.Min.Y;
-                            Point3d basePartCenter = new Point3d(base_x, base_y, base_z);
-                            GetPipeExits(basePartCenter, currModel);
-                        }
-
-                        Point3d pipeExit = new Point3d();
-                        bool allTaken = true;
-                        foreach (var item in pipeExitPts)
-                        {
-                            if (item.isTaken == false && item.location.isTaken == false)
+                            if (pipeExitPts.Count == 0)
                             {
-                                pipeExit = new Point3d(item.location.X, item.location.Y, item.location.Z);
-                                item.isTaken = true;
-                                allTaken = false;
-                                break;
+                                double base_z = boundingBox.Min.Z;
+                                double base_x = (boundingBox.Max.X - boundingBox.Min.X) / 2 + boundingBox.Min.X;
+                                double base_y = (boundingBox.Max.Y - boundingBox.Min.Y) / 2 + boundingBox.Min.Y;
+                                Point3d basePartCenter = new Point3d(base_x, base_y, base_z);
+                                GetPipeExits(basePartCenter, currModel);
+                            }
+
+
+                            bool allTaken = true;
+                            foreach (var item in pipeExitPts)
+                            {
+                                if (item.isTaken == false && item.location.isTaken == false)
+                                {
+                                    pipeExit = new Point3d(item.location.X, item.location.Y, item.location.Z);
+                                    item.isTaken = true;
+                                    allTaken = false;
+                                    break;
+                                }
+                            }
+                            if (allTaken)
+                            {
+                                RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore LED light parameters");
+                                return;
                             }
                         }
-                        if (allTaken)
-                        {
-                            RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore LED light parameters");
-                            return;
-                        }
+                        
 
                         List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
                         #endregion
@@ -354,7 +359,7 @@ namespace DynaModel_v2.Light_Pipe
                         double angle_Route1 = AngleOfCurve(bestRoute1);
 
                         Curve bestRoute;
-                        
+
                         bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
 
                         // Delete all temp boxes
@@ -377,11 +382,9 @@ namespace DynaModel_v2.Light_Pipe
                         soluablePipeRoute = soluablePipeRoute.Extend(CurveEnd.Start, 100, CurveExtensionStyle.Line);
 
                         Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
-                        Brep[] lightGuidePipe = Brep.CreatePipe(lightGuidePipeRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                         Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 2, 2.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
                         soluablePipe = Brep.CreateBooleanSplit(soluablePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
-                        lightGuidePipe = Brep.CreateBooleanSplit(lightGuidePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
                         conductivePipe = Brep.CreateBooleanSplit(conductivePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
                         Guid conductivePipeGuid = myDoc.Objects.Add(conductivePipe[0], redAttribute);
                         InViewObject conductiveObject = new InViewObject(conductivePipe[0], conductivePipeGuid, "conductive pipe");
@@ -392,24 +395,124 @@ namespace DynaModel_v2.Light_Pipe
                         combinableLightPipe.Add(soluablePipe[0]);
                         conductiveObjects.Add(conductiveObject);
 
+                        Intersection.BrepBrep(customized_part, currModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves1, out Point3d[] intersectionPoints1);
+                        BrepEdge pipeEndEdge = null;
+                        double minDistance = double.MaxValue;
+
+                        foreach (var edge in soluablePipe[0].Edges)
+                        {
+                            if (edge.TryGetCircle(out Circle circle))
+                            {
+                                if (edge.ClosestPoint(soluablePipeRoute.PointAtEnd, out double t))
+                                {
+                                    Point3d pt = edge.PointAt(t);
+                                    double distance = pt.DistanceTo(soluablePipeRoute.PointAtEnd);
+                                    if (distance < minDistance)
+                                    {
+                                        pipeEndEdge = edge;
+                                        minDistance = distance;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (pipeEndEdge != null)
+                        {
+                            //myDoc.Objects.AddCurve(intersectionCurves1[0]);
+                            //myDoc.Objects.AddCurve(pipeEndEdge.ToNurbsCurve());
+                            //myDoc.Objects.Select(curve1);
+                            //myDoc.Objects.Select(curve2);
+                            //string loftCommand = "_Loft _Enter _Enter";
+                            //RhinoApp.RunScript(loftCommand, true);
+
+                            //// Clean up the selection
+                            //myDoc.Objects.UnselectAll();
+
+                            Curve curve1 = intersectionCurves1[0];
+                            Curve curve2 = pipeEndEdge.ToNurbsCurve();
+
+
+                            if (curve1.IsClosed && curve2.IsClosed)
+                            {
+                                if (!Curve.DoDirectionsMatch(curve1, curve2))
+                                    curve2.Reverse();
+                                Point3d start = curve1.PointAtStart;
+                                curve2.ClosestPoint(start, out double t);
+                                curve2.ChangeClosedCurveSeam(t);
+                                Curve[] crossSectionCurves = new Curve[] { curve1, curve2 };
+                                Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                                Brep lightGuidPipe = loftBreps[0];
+                                lightGuidPipe.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                                Brep patch = Brep.CreatePatch(new[] { curve1 }, null,myDoc.ModelAbsoluteTolerance);
+                                lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, patch }, myDoc.ModelAbsoluteTolerance);
+
+                                //TODO: Fix the pipe into manifold
+                                
+                                Guid a = myDoc.Objects.Add(lightGuidPipe);
+                                if(a == Guid.Empty)
+                                {
+                                    RhinoApp.WriteLine("Light pipe cannot be created with this pattern, try again with a new pattern");
+                                    myDoc.Objects.Delete(conductivePipeGuid, true);
+                                    return;
+                                }
+                                ignorePipes.Add(lightGuidPipe);
+                            }
+                        }
+
+
+                        ignorePipes.Add(soluablePipe[0]);
+                        
+
                         myDoc.Objects.AddBrep(soluablePipe[0], soluableAttribute); //soluablePipe[1] if used CreateBooleanSplit
-                        myDoc.Objects.AddBrep(lightGuidePipe[0], lightGuideAttribute);
                         #endregion
 
-                        //Pass the result as Item to the Save button
-                        Item saveItem = new Item();
-                        saveItem.StartPoint = pipeExit;
-                        saveItem.EndPoint = customized_part_center;
-                        saveItem.EndPointModel = customized_part;
-                        saveItem.Name = "LED Light";
-                        DA.SetData(0, saveItem);
+                        
                     }
-
-                    #endregion
+                    //Pass the result as Item to the Save button
+                    Item saveItem = new Item();
+                    saveItem.StartPoint = pipeExit;
+                    //saveItem.EndPoint = customized_part_center;
+                    foreach (Brep brep in customized_partBreps)
+                        saveItem.EndPointModel.Add(brep.DuplicateBrep());
+                    saveItem.Name = "LED Light";
+                    DA.SetData(0, saveItem);
 
                 }
             }
             
+        }
+
+        private Brep MakeManifold(Brep brep)
+        {
+            // Step 1: Identify non-manifold edges and vertices
+            var nonManifoldEdges = new List<BrepEdge>();
+
+            foreach (var edge in brep.Edges)
+            {
+                if (edge.Valence == EdgeAdjacency.NonManifold)
+                    nonManifoldEdges.Add(edge);
+            }
+
+            // Step 2: Fix non-manifold edges
+            foreach (var edge in nonManifoldEdges)
+            {
+                var faces = edge.AdjacentFaces();
+                for (int i = 1; i < faces.Length; i++)
+                {
+                    // Split the edge and adjust topology
+                    var face = brep.Faces[faces[i]];
+                    var newEdge = face.Split(new[] { edge }, myDoc.ModelAbsoluteTolerance);
+
+                    //if (newEdge != null)
+                    //{
+                    //    edge = newEdge;
+                    //}
+                }
+                brep.Edges.RemoveNakedMicroEdges(myDoc.ModelAbsoluteTolerance);
+            }
+
+            return brep;
         }
 
         /// <summary>
@@ -1069,7 +1172,7 @@ namespace DynaModel_v2.Light_Pipe
                     if (brep != null)
                     {
                         //Ignore the current model and customized part
-                        if (brep.IsDuplicate(currModel, myDoc.ModelAbsoluteTolerance) || brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance))
+                        if (brep.IsDuplicate(currModel, myDoc.ModelAbsoluteTolerance) || brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance) || ignorePipes.Any(ignorePipe => !brep.IsDuplicate(ignorePipe, myDoc.ModelAbsoluteTolerance)))
                         {
                             continue;
                         }

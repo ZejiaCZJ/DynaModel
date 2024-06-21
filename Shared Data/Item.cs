@@ -18,13 +18,14 @@ namespace DynaModel_v2.SharedData
 
         public Point3d StartPoint { get; set; }
 
-        public Brep EndPointModel { get; set; }
+        public List<Brep> EndPointModel { get; set; }
 
         public Essentials gearEssentials { get; set; }
 
         public Item()
         {
             Name = string.Empty;
+            EndPointModel = new List<Brep>();
         }
     }
 }

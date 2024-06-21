@@ -412,7 +412,7 @@ namespace DynaModel_v2.AirPipe
                         Item saveItem = new Item();
                         saveItem.StartPoint = pipeExit;
                         saveItem.EndPoint = customized_part_center;
-                        saveItem.EndPointModel = customized_part;
+                        saveItem.EndPointModel.Add(customized_part);
                         saveItem.Name = "Air Pipe";
                         DA.SetData(0, saveItem);
 
