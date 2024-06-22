@@ -442,14 +442,28 @@ namespace DynaModel_v2.Light_Pipe
                                 Curve[] crossSectionCurves = new Curve[] { curve1, curve2 };
                                 Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
                                 Brep lightGuidPipe = loftBreps[0];
-                                lightGuidPipe.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                                lightGuidPipe = lightGuidPipe.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                                Brep patch = Brep.CreatePatch(new[] { curve1 }, null,myDoc.ModelAbsoluteTolerance);
-                                lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, patch }, myDoc.ModelAbsoluteTolerance);
-
-                                //TODO: Fix the pipe into manifold
+                                //Get the patch for the pipe
+                                Brep[] faces = currModel.Split(new[] { curve1 }, myDoc.ModelAbsoluteTolerance);
+                                Brep patch = new Brep();
+                                if (faces.Length > 0)
+                                {
+                                    patch = faces[0];
+                                    foreach (var face in faces)
+                                    {
+                                        if (face.Faces.Count < patch.Faces.Count)
+                                            patch = face;
+                                    }
+                                }
                                 
-                                Guid a = myDoc.Objects.Add(lightGuidPipe);
+                                
+
+                                //Brep patch = Brep.CreatePatch(new[] { curve1 }, null,myDoc.ModelAbsoluteTolerance);
+                                //myDoc.Objects.Add(patch, soluableAttribute);
+                                lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, patch }, myDoc.ModelAbsoluteTolerance);
+                                
+                                Guid a = myDoc.Objects.Add(lightGuidPipe, lightGuideAttribute);
                                 if(a == Guid.Empty)
                                 {
                                     RhinoApp.WriteLine("Light pipe cannot be created with this pattern, try again with a new pattern");
