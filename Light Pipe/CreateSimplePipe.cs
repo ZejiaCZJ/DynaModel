@@ -911,10 +911,10 @@ namespace DynaModel_v2.Light_Pipe
 
 
 
-            pipeExitPts.Add(new PipeExit(voxelSpace[lu.i, lu.j, lu.k]));
-            pipeExitPts.Add(new PipeExit(voxelSpace[ru.i, ru.j, ru.k]));
-            pipeExitPts.Add(new PipeExit(voxelSpace[ll.i, ll.j, ll.k]));
-            pipeExitPts.Add(new PipeExit(voxelSpace[rl.i, rl.j, rl.k]));
+            pipeExitPts.Add(new PipeExit(voxelSpace[lu.i, lu.j, lu.k], leftUpperCorner));
+            pipeExitPts.Add(new PipeExit(voxelSpace[ru.i, ru.j, ru.k], rightUpperCorner));
+            pipeExitPts.Add(new PipeExit(voxelSpace[ll.i, ll.j, ll.k], leftLowerCorner));
+            pipeExitPts.Add(new PipeExit(voxelSpace[rl.i, rl.j, rl.k], rightLowerCorner));
 
             myDoc.Objects.AddPoint(leftUpperCorner);
             myDoc.Objects.AddPoint(rightUpperCorner);

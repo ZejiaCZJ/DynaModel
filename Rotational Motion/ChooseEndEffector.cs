@@ -19,18 +19,23 @@ namespace DynaModel_v2.Rotational_Motion
         private Brep end_gear_top_gasket;
         private Brep end_gear_bottom_gasket;
         private Brep end_gear_shaft;
+        private Brep end_gear_shaft_clearance;
 
         private BevelGear first_driven_gear;
         private Brep first_driven_gear_top_gasket;
         private Brep first_driven_gear_bottom_gasket;
 
         private Brep shaft;
+        private Brep shaft_clearance;
 
         private SpurGear connector_gear;
         private Brep connector_gear_top_gasket;
         private Brep connector_gear_bottom_gasket;
 
         private SpurGear second_driven_gear;
+        private Brep second_driven_gear_shaft;
+        private Brep second_driven_gear_top_gasket;
+        private Brep second_driven_gear_bottom_gasket;
 
         public BevelGear EndGear { get => end_gear; set => end_gear = value; }
 
@@ -55,6 +60,10 @@ namespace DynaModel_v2.Rotational_Motion
         public Brep ConnectorGearBottomGasket { get => connector_gear_bottom_gasket; set => connector_gear_bottom_gasket = value.DuplicateBrep(); }
 
         public Brep Shaft { get => shaft; set => shaft = value.DuplicateBrep(); }
+
+        public Brep ShaftClearance { get => shaft_clearance; set => shaft_clearance = value.DuplicateBrep(); }
+
+        public Brep EndGearShaftClearance { get => end_gear_shaft_clearance; set => end_gear_shaft_clearance = value.DuplicateBrep(); }
     }
 
 
@@ -545,6 +554,8 @@ namespace DynaModel_v2.Rotational_Motion
                                         gearSet.FirstDrivenGearBottomGasket = first_driven_gear_bottom_gasket;
                                         gearSet.ConnectorGearTopGasket = connector_gear_top_gasket;
                                         gearSet.ConnectorGearBottomGasket = connector_gear_bottom_gasket;
+                                        gearSet.EndGearShaftClearance = end_gear_clearance_shaft;
+                                        gearSet.ShaftClearance = shaft_clearance;
                                         gearSet.Shaft = shaft;
                                         gearSet.SecondDrivenGear = second_driven_gear;
                                         workable_gearsets.Add(gearSet);
@@ -571,6 +582,8 @@ namespace DynaModel_v2.Rotational_Motion
                                     gearSet.FirstDrivenGearBottomGasket = first_driven_gear_bottom_gasket;
                                     gearSet.ConnectorGearTopGasket = connector_gear_top_gasket;
                                     gearSet.ConnectorGearBottomGasket = connector_gear_bottom_gasket;
+                                    gearSet.EndGearShaftClearance = end_gear_clearance_shaft;
+                                    gearSet.ShaftClearance = shaft_clearance;
                                     gearSet.Shaft = shaft;
                                     gearSet.SecondDrivenGear = second_driven_gear;
                                     workable_gearsets.Add(gearSet);

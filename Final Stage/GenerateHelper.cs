@@ -15,6 +15,8 @@ using DynaModel_v2.Light_Pipe;
 using Rhino.Collections;
 using Priority_Queue;
 using System.Drawing;
+using Rhino.Commands;
+using Grasshopper.Kernel.Geometry.Delaunay;
 
 namespace DynaModel_v2.Final_Stage
 {
@@ -22,24 +24,40 @@ namespace DynaModel_v2.Final_Stage
     {
         //General parameter
         RhinoDoc myDoc = RhinoDoc.ActiveDoc;
-        Guid currModelObjId = Guid.Empty;
-        Brep currModel = null;
+        public Guid currModelObjId = Guid.Empty;
+        public Brep currModel = null;
+        BoundingBox currModel_box;
         List<Brep> allBreps = new List<Brep>();
         List<Guid> allBreps_guid = new List<Guid>();
         Voxel[,,] voxelSpace = null;
         List<Brep> allPipes = new List<Brep>();
         ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
+        double foundation_length = 60;
+        double foundation_width = 90;
+        double foundation_height = 30;
+        Point3d foundation_origin;
+        Point3d foundation_center;
+        public Brep foundation { get; set; }
+        double pcb_width = 50;
+        double pcb_length = 50;
+        double pcb_origin_x = 5; //Relative coordinate to foundation
+        double pcb_origin_y = 5;//Relative coordinate to foundation
+        Point3d pcb_origin;
+        Point3d pcb_center;
+        public List<Brep> toDelete = new List<Brep>();
+        private List<Guid> specialPipes = new List<Guid>(); //Shafts that is not vertical or horizontal
+
 
         //Gear parameter
+        private double start_gear_elevation = 2.5;
         private double module = 1.5;
         private double pressure_angle = 20;
         private double thickness = 5;
         private double ratio;
         private double clearance = 0.5;
+        
 
         //LED Light parameter
-        private double pcbWidth = 20;
-        private double pcbHeight = 20;
         private double pipeRadius = 3.5;
         private int voxelSpace_offset = 1;
         private List<Brep> ignorePipes = new List<Brep>();
@@ -49,8 +67,6 @@ namespace DynaModel_v2.Final_Stage
         private List<Curve> combinableLightPipeRoute = new List<Curve>();
         private List<Brep> combinableLightPipe = new List<Brep>();
         private List<InViewObject> conductiveObjects = new List<InViewObject>();
-
-        
 
 
         public GenerateHelper(out bool success)
@@ -66,7 +82,24 @@ namespace DynaModel_v2.Final_Stage
             {
                 RhinoApp.WriteLine("There are none or more than one models in Rhino document");
                 success = false;
+                return;
             }
+
+            //Generate Foundation and PCB if possible
+            currModel_box = currModel.GetBoundingBox(true);
+            Circle circle = new Circle(new Point3d(0,0,currModel_box.Min.Z + 0.1), 1000);
+            Brep planarSurface = Brep.CreatePlanarBreps(new[] { circle.ToNurbsCurve() }, myDoc.ModelAbsoluteTolerance)[0];
+            Brep[] a = planarSurface.Trim(currModel, myDoc.ModelAbsoluteTolerance);
+            Brep currModel_bottom = new Brep();
+            if(a.Length > 0)
+                currModel_bottom = a[0];
+            Point3d centroid = AreaMassProperties.Compute(currModel_bottom.Faces[0]).Centroid;
+
+            foundation_center = new Point3d(centroid.X, centroid.Y, currModel_box.Min.Z + foundation_height/2);
+            foundation_origin = new Point3d(centroid.X - foundation_width/2, centroid.Y - foundation_length/2, currModel_box.Min.Z);
+            foundation = new BoundingBox(foundation_origin, new Point3d(foundation_center.X + foundation_width / 2, foundation_center.Y + foundation_length / 2, currModel_box.Min.Z + foundation_height)).ToBrep();
+            pcb_origin = new Point3d(foundation_origin.X + pcb_origin_x, foundation_origin.Y + pcb_origin_y, currModel_box.Min.Z + foundation_height);
+            pcb_center = new Point3d(pcb_origin.X + pcb_width, pcb_origin.Y + pcb_length, pcb_origin.Z);
 
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
@@ -203,10 +236,10 @@ namespace DynaModel_v2.Final_Stage
             BoundingBox mainModel_bbox = mainModel.GetBoundingBox(true);
 
             //Find central point of the base of the bounding box
-            Point3d start_gear_centerPoint = new Point3d(mainModel_bbox.Center.X, mainModel_bbox.Center.Y, mainModel_bbox.Min.Z + 3);
+            Point3d start_gear_centerPoint = new Point3d(pcb_origin.X + pcb_width/2, foundation_origin.Y, foundation_origin.Z + foundation_height + start_gear_elevation);
             Vector3d start_gear_Direction = new Vector3d(0, 0, 1);
             Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
-            int start_gear_teethNum = 10;
+            int start_gear_teethNum = 20;
             double start_gear_selfRotAngle = 0;
 
             SpurGear start_gear = new SpurGear(start_gear_centerPoint, start_gear_Direction, start_gear_xDir, start_gear_teethNum, module, pressure_angle, thickness, start_gear_selfRotAngle, true);
@@ -479,6 +512,8 @@ namespace DynaModel_v2.Final_Stage
                                 gearSet.ConnectorGearBottomGasket = connector_gear_bottom_gasket;
                                 gearSet.Shaft = shaft;
                                 gearSet.SecondDrivenGear = second_driven_gear;
+                                gearSet.EndGearShaftClearance = end_gear_clearance_shaft;
+                                gearSet.ShaftClearance = shaft_clearance;
                                 workable_gearsets.Add(gearSet);
                             }
                         }
@@ -505,6 +540,8 @@ namespace DynaModel_v2.Final_Stage
                             gearSet.ConnectorGearBottomGasket = connector_gear_bottom_gasket;
                             gearSet.Shaft = shaft;
                             gearSet.SecondDrivenGear = second_driven_gear;
+                            gearSet.EndGearShaftClearance = end_gear_clearance_shaft;
+                            gearSet.ShaftClearance = shaft_clearance;
                             workable_gearsets.Add(gearSet);
                         }
                     }
@@ -550,13 +587,13 @@ namespace DynaModel_v2.Final_Stage
 
                 //Adjust second driven gear if needed
                 second_driven_gear_tipRadius = (connector_gear.CenterPoint.DistanceTo(start_gear_centerPoint) - start_gear.BaseRadius - connector_gear.BaseRadius) / 2;
-                if (second_driven_gear_tipRadius > getTipRadius(4))
+                if (second_driven_gear_tipRadius > getTipRadius(5))
                 {
                     second_driven_gear_teethNum = getNumTeeth(second_driven_gear_tipRadius);
                     Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
                     start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + second_driven_gear_tipRadius);
                     second_driven_gear_centerPoint = start_gear_connection_rail.To;
-                    second_driven_gear = new SpurGear(second_driven_gear_centerPoint, second_driven_gear_Direction, second_driven_gear_xDir, second_driven_gear_teethNum, module, pressure_angle, thickness, second_driven_gear_selfRotAngle, false);
+                    second_driven_gear = new SpurGear(second_driven_gear_centerPoint, second_driven_gear_Direction, second_driven_gear_xDir, second_driven_gear_teethNum, module, pressure_angle, thickness, second_driven_gear_selfRotAngle, true);
                 }
                 else
                 {
@@ -671,8 +708,9 @@ namespace DynaModel_v2.Final_Stage
                 {
                     rail5 = new Line(bestGearSet.ConnectorGear.CenterPoint, bestGearSet.SecondDrivenGear.CenterPoint);
                     double angle = RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(0, 1, 0)));
+                    //RhinoApp.WriteLine("Rotating with angle" + angle);
                     bestGearSet.ConnectorGear.Rotate(180 - angle);
-                    bestGearSet.SecondDrivenGear.Rotate(-angle);
+                    bestGearSet.SecondDrivenGear.Rotate(angle - 180);
                     bestGearSet.ConnectorGear.Rotate(360 / bestGearSet.ConnectorGear.NumTeeth / 2);
                 }
                 else if (bestGearSet.ConnectorGear.CenterPoint.X < bestGearSet.SecondDrivenGear.CenterPoint.X && bestGearSet.ConnectorGear.CenterPoint.Y > bestGearSet.SecondDrivenGear.CenterPoint.Y)
@@ -709,17 +747,59 @@ namespace DynaModel_v2.Final_Stage
             myDoc.Objects.Add(bestGearSet.ConnectorGearTopGasket);
 
             myDoc.Objects.Add(bestGearSet.EndGear.Model);
-            if (bestGearSet.SecondDrivenGear != null)
-                myDoc.Objects.Add(bestGearSet.SecondDrivenGear.Model);
             myDoc.Objects.Add(bestGearSet.FirstDrivenGear.Model);
             myDoc.Objects.Add(bestGearSet.ConnectorGear.Model);
 
             myDoc.Objects.Add(bestGearSet.EndGearBottomGasket);
             myDoc.Objects.Add(bestGearSet.EndGearTopGasket);
 
-            myDoc.Objects.Add(bestGearSet.Shaft);
-            myDoc.Objects.Add(bestGearSet.EndGearShaft);
+            //Second driven gear, gasket and shaft
+            if (bestGearSet.SecondDrivenGear != null)
+            {
+                myDoc.Objects.Add(bestGearSet.SecondDrivenGear.Model);
+                Point3d bottom = new Point3d(bestGearSet.SecondDrivenGear.CenterPoint);
+                bottom.Z = bottom.Z - 0.3;
+                rail5 = new Line(bottom, new Point3d(bottom.X, bottom.Y, bottom.Z - 2));
+                Brep b = Brep.CreateThickPipe(rail5.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(b);
+                bottom.Z = bottom.Z + thickness + 0.6;
+                rail5 = new Line(bottom, new Point3d(bottom.X, bottom.Y, bottom.Z + 3));
+                b = Brep.CreateThickPipe(rail5.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(b);
+                Point3d top = new Point3d(bottom.X, bottom.Y, bottom.Z + 2);
+                bottom = new Point3d(bestGearSet.SecondDrivenGear.CenterPoint);
+                bottom.Z = bottom.Z - 1;
+                rail5 = new Line(top, bottom);
+                b = Brep.CreatePipe(rail5.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(b);
+                b = Brep.CreatePipe(rail5.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(b);
+            }
+                
+            
 
+
+
+            myDoc.Objects.Add(bestGearSet.Shaft);
+            specialPipes.Add(myDoc.Objects.Add(bestGearSet.EndGearShaft));
+            myDoc.Objects.Add(start_gear.Model);
+
+            //Start gear boundingbox
+            BoundingBox box = start_gear.Model.GetBoundingBox(true);
+            box.Inflate(2);
+            toDelete.Add(box.ToBrep());
+
+            toDelete.Add(bestGearSet.SecondDrivenGear.Boundingbox_big);
+
+            //Connector gear boundingbox
+            box = bestGearSet.ConnectorGear.Model.GetBoundingBox(true);
+            box = new BoundingBox(box.Min.X - 1, box.Min.Y - 1, box.Min.Z - 2, box.Max.X + 1, box.Max.Y + 1, box.Max.Z + 3);
+            toDelete.Add(box.ToBrep());
+
+            toDelete.Add(bestGearSet.ShaftClearance);
+            toDelete.Add(bestGearSet.FirstDrivenGear.Boundingbox_big);
+            toDelete.Add(bestGearSet.EndGear.Boundingbox_big);
+            toDelete.Add(bestGearSet.EndGearShaftClearance);
             myDoc.Views.Redraw();
 
             return true;
@@ -747,8 +827,6 @@ namespace DynaModel_v2.Final_Stage
             Intersection.BrepBrep(currModel, customized_part, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPts);
             if (customized_part_center.DistanceTo(currModel.ClosestPoint(customized_part_center)) > 1 || (intersectionCurves.Length == 0 && intersectionPts.Length == 0))
             {
-                myDoc.Objects.Add(customized_part);
-                myDoc.Objects.AddPoint(customized_part_center);
                 RhinoApp.WriteLine("This LED Light item cannot be created. Due to impatible to other items");
                 return false;
             }
@@ -756,32 +834,17 @@ namespace DynaModel_v2.Final_Stage
             voxelSpace = null;
             GetVoxelSpace(currModel, 1, customized_part);
 
-            //Find the Pipe exit location
-            if (ledPipeExitPts.Count == 0)
-            {
-                BoundingBox boundingBox = currModel.GetBoundingBox(true);
-                double base_z = boundingBox.Min.Z;
-                double base_x = (boundingBox.Max.X - boundingBox.Min.X) / 2 + boundingBox.Min.X;
-                double base_y = (boundingBox.Max.Y - boundingBox.Min.Y) / 2 + boundingBox.Min.Y;
-                Point3d basePartCenter = new Point3d(base_x, base_y, base_z);
-                GetPipeExits(basePartCenter, currModel);
-            }
+            Point3d pipeExit = new Point3d(foundation_origin.X + 72.5, foundation_origin.Y + 63, foundation_origin.Z + foundation_height - 1);
 
-            Point3d pipeExit = new Point3d();
-            bool allTaken = true;
-            foreach (var item in ledPipeExitPts)
+            Index base_part_center_index = FindClosestPointIndex(pipeExit, currModel);
+
+            Voxel goal = voxelSpace[base_part_center_index.i, base_part_center_index.j, base_part_center_index.k];
+
+            myDoc.Objects.AddPoint(pipeExit);
+
+            if(goal.isTaken)
             {
-                if (item.isTaken == false && item.location.isTaken == false)
-                {
-                    pipeExit = new Point3d(item.location.X, item.location.Y, item.location.Z);
-                    item.isTaken = true;
-                    allTaken = false;
-                    break;
-                }
-            }
-            if (allTaken)
-            {
-                RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore LED light parameters");
+                RhinoApp.WriteLine("The air pipe exit is taken. Cannot generate air pipe!");
                 return false;
             }
 
@@ -820,8 +883,8 @@ namespace DynaModel_v2.Final_Stage
                 List<Point3d> bestEndPath = FindShortestPath(bestMiddleRoute.PointAtStart, pipeExit, customized_part, currModel, 2);
                 bestStartRoute = Curve.CreateInterpolatedCurve(bestStartPath, 1);
                 bestEndRoute = Curve.CreateInterpolatedCurve(bestEndPath, 1);
-                myDoc.Objects.Add(bestStartRoute, soluableAttribute);
-                myDoc.Objects.Add(bestEndRoute, lightGuideAttribute);
+                //myDoc.Objects.Add(bestStartRoute, soluableAttribute);
+                //myDoc.Objects.Add(bestEndRoute, lightGuideAttribute);
                 conductiveObjects[closestIndex].guid = myDoc.Objects.Add(conductiveObjects[closestIndex].brep, redAttribute);
             }
 
@@ -831,9 +894,19 @@ namespace DynaModel_v2.Final_Stage
             double totalDistance = bestStartRoute.GetLength() + bestEndRoute.GetLength();
             if (bestRoute.GetLength() < totalDistance)
             {
+                bestRoute = bestRoute.Trim(CurveEnd.End, 7);
+                bestRoute = bestRoute.Trim(CurveEnd.Start, 7);
+                Circle edgeAtStart = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3.2);
+                Circle edgeAtEnd = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3.2);
                 //Create method 1 pipe 
-                Brep[] airPipe = Brep.CreatePipe(bestRoute, 2, true, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
-                airPipe = Brep.CreateBooleanSplit(airPipe[0], currModel, myDoc.ModelAbsoluteTolerance);
+                Brep[] airPipe = Brep.CreatePipe(bestRoute, 3.2, true, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+
+                Circle pipeStartEdge = new Circle(pipeExit, 3.2);
+                Curve pipeEndEdge = intersectionCurves[0];
+
+
+
+                //airPipe = Brep.CreateBooleanSplit(airPipe[0], currModel, myDoc.ModelAbsoluteTolerance);
                 myDoc.Objects.Add(airPipe[0], solidAttribute);
             }
             else
@@ -861,7 +934,7 @@ namespace DynaModel_v2.Final_Stage
             List<Brep> customized_partBreps = savedItem.EndPointModel;
 
             
-            Point3d pipeExit = Point3d.Unset;
+            PipeExit pipeExit = new PipeExit();
             foreach (Brep customized_part in customized_partBreps)
             {
                 Point3d customized_part_center = customized_part.GetBoundingBox(true).Center;
@@ -878,7 +951,7 @@ namespace DynaModel_v2.Final_Stage
                 GetVoxelSpace(currModel, 1, customized_part);
 
                 //Find the Pipe exit location
-                if (pipeExit == Point3d.Unset)
+                if (pipeExit.location == null)
                 {
                     if (ledPipeExitPts.Count == 0)
                     {
@@ -896,7 +969,7 @@ namespace DynaModel_v2.Final_Stage
                     {
                         if (item.isTaken == false && item.location.isTaken == false)
                         {
-                            pipeExit = new Point3d(item.location.X, item.location.Y, item.location.Z);
+                            pipeExit = item;
                             item.isTaken = true;
                             allTaken = false;
                             break;
@@ -909,15 +982,15 @@ namespace DynaModel_v2.Final_Stage
                     }
                 }
 
-                List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
+                List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), customized_part, currModel, 1);
 
                 #region Get the line that combine all gears ---> bestRoute2
-                List<Brep> allTempBoxes = CombineBreps(customized_part, currModel);
+                List<BoundingBox> allTempBoxes = CombineBreps(customized_part, currModel);
                 List<Point3d> bestRoute2 = bestRoute1;
                 if (allTempBoxes.Count > 0)
                 {
                     GetVoxelSpace(currModel, 2, tempBoxes: allTempBoxes);
-                    bestRoute2 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
+                    bestRoute2 = FindShortestPath(customized_part_center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), customized_part, currModel, 1);
                 }
                 voxelSpace = null;
                 #endregion
@@ -926,8 +999,8 @@ namespace DynaModel_v2.Final_Stage
                 double angle_Route1 = AngleOfCurve(bestRoute1);
                 double angle_Route2 = AngleOfCurve(bestRoute2);
 
-                myDoc.Objects.Add(Curve.CreateInterpolatedCurve(bestRoute1, 1));
-                myDoc.Objects.Add(Curve.CreateInterpolatedCurve(bestRoute2, 1));
+                //myDoc.Objects.Add(Curve.CreateInterpolatedCurve(bestRoute1, 1));
+                //myDoc.Objects.Add(Curve.CreateInterpolatedCurve(bestRoute2, 1));
 
                 Curve bestRoute;
 
@@ -946,63 +1019,63 @@ namespace DynaModel_v2.Final_Stage
                 #region Create Pipes
                 //Cut the first 5mm of the bestRoute to generate the inner pipe
                 //Double[] divisionParameters = bestRoute.DivideByLength(5, true, out Point3d[] points);
-                Curve lightGuidePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() - 7);
                 Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.End, 7);
 
-                List<GeometryBase> geometryBases = new List<GeometryBase>();
-                geometryBases.Add(customized_part);
+                soluablePipeRoute = soluablePipeRoute.Trim(CurveEnd.Start, soluablePipeRoute.GetLength() / 10);
 
-                lightGuidePipeRoute = lightGuidePipeRoute.Extend(CurveEnd.End, 100, CurveExtensionStyle.Line);
-                soluablePipeRoute = soluablePipeRoute.Extend(CurveEnd.Start, 100, CurveExtensionStyle.Line);
+                //soluablePipeRoute = soluablePipeRoute.Extend(CurveEnd.Start, CurveExtensionStyle.Smooth, pipeExit.actualLocation);
+                //soluablePipeRoute.Trim(CurveEnd.Start, soluablePipeRoute.GetLength() / 12);
 
-                Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
-                Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 2, 2.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 3, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
-                soluablePipe = Brep.CreateBooleanSplit(soluablePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
-                conductivePipe = Brep.CreateBooleanSplit(conductivePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
+
+                //BrepEdge of the start of the soluablePipe
+                Vector3d tangent = soluablePipeRoute.TangentAtStart;
+                Circle pipeStartEdge = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, 3.2);
+                Circle actual_pipeStartCircle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3.2);
+
+                //Generate the soluable pipe that perfectly match the light source from the foundation
+                if (pipeStartEdge.IsValid)
+                {
+                    Curve curve1 = actual_pipeStartCircle.ToNurbsCurve();
+                    Curve curve2 = pipeStartEdge.ToNurbsCurve();
+                    if (curve1.IsClosed && curve2.IsClosed)
+                    {
+                        if (!Curve.DoDirectionsMatch(curve1, curve2))
+                            curve2.Reverse();
+                        Point3d start = curve1.PointAtStart;
+                        curve2.ClosestPoint(start, out double t);
+                        curve2.ChangeClosedCurveSeam(t);
+                        Curve[] crossSectionCurves = new Curve[] { curve1, curve2 };
+                        Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                        Brep soluableExtension = loftBreps[0];
+                        soluableExtension = soluableExtension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                        //soluablePipe[0] = Brep.CreateBooleanUnion(new[] { soluableExtension, soluablePipe[0] }, myDoc.ModelAbsoluteTolerance)[0];
+                        specialPipes.Add(myDoc.Objects.Add(soluableExtension));
+                    }
+                }
+
+                //soluablePipe = Brep.CreateBooleanSplit(soluablePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
+                //conductivePipe = Brep.CreateBooleanSplit(conductivePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
                 Guid conductivePipeGuid = myDoc.Objects.Add(conductivePipe[0], redAttribute);
+                specialPipes.Add(conductivePipeGuid);
                 InViewObject conductiveObject = new InViewObject(conductivePipe[0], conductivePipeGuid, "conductive pipe");
 
-                soluablePipeRoute = bestRoute.Trim(CurveEnd.End, 7);
-                //soluablePipeRoute = soluablePipeRoute.Trim(1, 1);
-                combinableLightPipeRoute.Add(soluablePipeRoute);
+                combinableLightPipeRoute.Add(bestRoute.Trim(CurveEnd.End, 7));
                 combinableLightPipe.Add(soluablePipe[0]);
                 conductiveObjects.Add(conductiveObject);
 
                 Intersection.BrepBrep(customized_part, currModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves1, out Point3d[] intersectionPoints1);
-                BrepEdge pipeEndEdge = null;
-                double minDistance = double.MaxValue;
 
-                //Get the edge of the circular face of the soluable Pipe
-                foreach (var edge in soluablePipe[0].Edges)
+                //BrepEdge of the end of the soluablePipe
+                tangent = soluablePipeRoute.TangentAtEnd;
+                Circle pipeEndEdge = new Circle(new Plane(soluablePipeRoute.PointAtEnd, tangent), soluablePipeRoute.PointAtEnd, 3.2);
+
+                //Generate the light pipe that perfectly match the user's defined pattern
+                if (pipeEndEdge.IsValid)
                 {
-                    if (edge.TryGetCircle(out Circle circle))
-                    {
-                        if (edge.ClosestPoint(soluablePipeRoute.PointAtEnd, out double t))
-                        {
-                            Point3d pt = edge.PointAt(t);
-                            double distance = pt.DistanceTo(soluablePipeRoute.PointAtEnd);
-                            if (distance < minDistance)
-                            {
-                                pipeEndEdge = edge;
-                                minDistance = distance;
-                            }
-                        }
-                    }
-                }
-
-                if (pipeEndEdge != null)
-                {
-                    //myDoc.Objects.AddCurve(intersectionCurves1[0]);
-                    //myDoc.Objects.AddCurve(pipeEndEdge.ToNurbsCurve());
-                    //myDoc.Objects.Select(curve1);
-                    //myDoc.Objects.Select(curve2);
-                    //string loftCommand = "_Loft _Enter _Enter";
-                    //RhinoApp.RunScript(loftCommand, true);
-
-                    //// Clean up the selection
-                    //myDoc.Objects.UnselectAll();
-
                     Curve curve1 = intersectionCurves1[0];
                     Curve curve2 = pipeEndEdge.ToNurbsCurve();
 
@@ -1016,23 +1089,50 @@ namespace DynaModel_v2.Final_Stage
                         curve2.ChangeClosedCurveSeam(t);
                         Curve[] crossSectionCurves = new Curve[] { curve1, curve2 };
                         Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
-                        Brep lightGuidPipe = loftBreps[0].CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                        Brep lightGuidPipe = loftBreps[0];
+                        lightGuidPipe = lightGuidPipe.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                        Brep patch = Brep.CreatePatch(new[] { curve1 }, null, myDoc.ModelAbsoluteTolerance);
-                        lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, patch }, myDoc.ModelAbsoluteTolerance);
+                        //Get the patch for the pipe
+                        if(!lightGuidPipe.IsSolid)
+                        {
+                            //Brep[] faces = currModel.Split(new[] { curve1 }, 0.1);
 
-                        //TODO: Fix the pipe into manifold
+                            //Brep patch = new Brep();
+                            //if (faces.Length > 0)
+                            //{
+                            //    patch = faces[0];
+                            //    foreach (var face in faces)
+                            //    {
+                            //        if (face.Faces.Count < patch.Faces.Count)
+                            //            patch = face;
+                            //    }
+                            //}
+                            //lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, patch }, myDoc.ModelAbsoluteTolerance);
+                            myDoc.Objects.AddCurve(curve1);
+                            myDoc.Objects.Add(currModel);
+                        }
 
-                        ignorePipesGuid.Add(myDoc.Objects.Add(lightGuidPipe, lightGuideAttribute));
+                        
+
+                        Guid a = myDoc.Objects.Add(lightGuidPipe, lightGuideAttribute);
+                        if (a == Guid.Empty)
+                        {
+                            RhinoApp.WriteLine("Fail to generate one LED light.");
+                            myDoc.Objects.Delete(conductivePipeGuid, true);
+                            return false;
+                        }
+                        specialPipes.Add(a);
                         ignorePipes.Add(lightGuidPipe);
+
                     }
                 }
 
 
                 ignorePipes.Add(soluablePipe[0]);
 
-
-                ignorePipesGuid.Add(myDoc.Objects.AddBrep(soluablePipe[0], soluableAttribute)); //soluablePipe[1] if used CreateBooleanSplit
+                Guid g = myDoc.Objects.Add(soluablePipe[0], soluableAttribute);
+                ignorePipesGuid.Add(g); //soluablePipe[1] if used CreateBooleanSplit
+                specialPipes.Add(g); 
                 #endregion
             }
 
@@ -1162,11 +1262,14 @@ namespace DynaModel_v2.Final_Stage
         #endregion
 
         #region LED Light Helper function
-        private void GetVoxelSpace(Brep currModel, int mode, Brep customized_part = null, List<Brep> tempBoxes = null, Brep ignorePart = null)
+        private void GetVoxelSpace(Brep currModel, int mode, Brep customized_part = null, List<BoundingBox> tempBoxes = null, Brep ignorePart = null)
         {
             if (mode == 1) // For initializing the voxelSpace
             {
                 var allObjects = new List<RhinoObject>(myDoc.Objects.GetObjectList(ObjectType.Brep));
+                List<BoundingBox> normalObjects_BrepBox = new List<BoundingBox>();
+                List<Brep> specialObjects_Brep = new List<Brep>();
+                List<BoundingBox> boundingBoxes = new List<BoundingBox>();
                 Guid customized_part_Guid = Guid.Empty;
                 Guid currModel_Guid = Guid.Empty;
 
@@ -1180,16 +1283,37 @@ namespace DynaModel_v2.Final_Stage
                         if (brep.IsDuplicate(currModel, myDoc.ModelAbsoluteTolerance))
                         {
                             currModel_Guid = guid;
+                            //allObjects.Remove(item);
+                            continue;
                         }
-                        if (brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance))
+                        else if (brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance))
                         {
                             customized_part_Guid = guid;
+                            //allObjects.Remove(item);
+                            continue;
                         }
+                        else if (ignorePipesGuid.Any(g => guid == g))
+                        {
+                            //allObjects.Remove(item);
+                            continue;
+                        }
+                        if(specialPipes.Any(g => guid == g))
+                        {
+                            specialObjects_Brep.Add(brep);
+                            continue;
+                        }
+
+                        BoundingBox boundingbox = brep.GetBoundingBox(true);
+                        if(!boundingbox.Equals(BoundingBox.Empty))
+                        {
+                            boundingbox.Inflate(6);
+                            normalObjects_BrepBox.Add(boundingbox);
+                        }
+                            
                     }
-
                 }
-
-
+                //foreach (var box in normalObjects_BrepBox)
+                //    myDoc.Objects.Add(box.ToBrep());
 
                 BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
@@ -1284,23 +1408,20 @@ namespace DynaModel_v2.Final_Stage
 
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
-                                foreach (var item in allObjects)
+                                foreach (var box in normalObjects_BrepBox)
                                 {
-                                    Guid guid = item.Id;
-                                    ObjRef currObj = new ObjRef(myDoc, guid);
-                                    Brep brep = currObj.Brep();
-
-
-
+                                    //See if the point is strictly inside of the brep
+                                    if (currentPt.X < box.Max.X && currentPt.Y < box.Max.Y && currentPt.Z < box.Max.Z && currentPt.X > box.Min.X && currentPt.Y > box.Min.Y && currentPt.Z > box.Min.Z)
+                                    {
+                                        voxelSpace[i, j, k].isTaken = true;
+                                        break;
+                                    }
+                                }
+                                foreach (var brep in specialObjects_Brep)
+                                {
                                     //See if the point is strictly inside of the brep
                                     if (brep != null)
                                     {
-                                        //Check if the current brep is the 3D model main body
-                                        if (guid == customized_part_Guid || guid == currModel_Guid || ignorePipesGuid.Any(g => guid == g))
-                                        {
-                                            continue;
-                                        }
-
                                         if (brep.IsPointInside(currentPt, myDoc.ModelAbsoluteTolerance, true))
                                         {
                                             voxelSpace[i, j, k].isTaken = true;
@@ -1320,7 +1441,7 @@ namespace DynaModel_v2.Final_Stage
                     }
                 });
                 #endregion
-                
+
             }
             else if (mode == 2) //For Light Pipe bestRoute2
             {
@@ -1338,17 +1459,10 @@ namespace DynaModel_v2.Final_Stage
                     {
                         for (int k = 0; k < h; k++)
                         {
-                            foreach (var brep in tempBoxes)
+                            foreach (var box in tempBoxes)
                             {
                                 Point3d currentPt = new Point3d(voxelSpace[i,j,k].X, voxelSpace[i, j, k].Y, voxelSpace[i, j, k].Z);
-                                if (brep.IsPointInside(currentPt, myDoc.ModelAbsoluteTolerance, true))
-                                {
-                                    voxelSpace[i, j, k].isTaken = true;
-                                    break;
-                                }
-
-                                //See if the point is too close to the brep and will cause intersection after creating the pipe
-                                if (brep.ClosestPoint(currentPt).DistanceTo(currentPt) <= maximumDistance)
+                                if (currentPt.X < box.Max.X && currentPt.Y < box.Max.Y && currentPt.Z < box.Max.Z && currentPt.X > box.Min.X && currentPt.Y > box.Min.Y && currentPt.Z > box.Min.Z)
                                 {
                                     voxelSpace[i, j, k].isTaken = true;
                                     break;
@@ -1363,19 +1477,18 @@ namespace DynaModel_v2.Final_Stage
         private void GetPipeExits(Point3d base_part_center, Brep currModel)
         {
             BoundingBox boundingBox = currModel.GetBoundingBox(true);
-            double offset = 2; //This offset stands for the gap between the edge of the PCB and the pipe exit
 
             //Left upper corner of the PCB
-            Point3d leftUpperCorner = new Point3d(base_part_center.X - pcbWidth / 2 + pipeRadius + offset, base_part_center.Y + pcbHeight / 2 - pipeRadius - offset, base_part_center.Z);
+            Point3d leftUpperCorner = new Point3d(pcb_origin.X + 6.2, pcb_origin.Y + 46.7, pcb_origin.Z);
 
             //Right upper corner of the PCB
-            Point3d rightUpperCorner = new Point3d(base_part_center.X + pcbWidth / 2 - pipeRadius - offset, base_part_center.Y + pcbHeight / 2 - pipeRadius - offset, base_part_center.Z);
+            Point3d rightUpperCorner = new Point3d(pcb_origin.X + 45.8, pcb_origin.Y + 46.3, pcb_origin.Z);
 
             //Left lower corner of the PCB
-            Point3d leftLowerCorner = new Point3d(base_part_center.X - pcbWidth / 2 + pipeRadius + offset, base_part_center.Y - pcbHeight / 2 + pipeRadius + offset, base_part_center.Z);
+            Point3d leftLowerCorner = new Point3d(pcb_origin.X + 2.9, pcb_origin.Y + 5.55, pcb_origin.Z);
 
             //Right lower corner of the PCB
-            Point3d rightLowerCorner = new Point3d(base_part_center.X + pcbWidth / 2 - pipeRadius - offset, base_part_center.Y - pcbHeight / 2 + pipeRadius + offset, base_part_center.Z);
+            Point3d rightLowerCorner = new Point3d(pcb_origin.X + 44.5, pcb_origin.Y + 6.5, pcb_origin.Z);
 
             Index lu = FindClosestPointIndex(leftUpperCorner, currModel);
             Index ru = FindClosestPointIndex(rightUpperCorner, currModel);
@@ -1436,10 +1549,10 @@ namespace DynaModel_v2.Final_Stage
 
 
 
-            ledPipeExitPts.Add(new PipeExit(voxelSpace[lu.i, lu.j, lu.k]));
-            ledPipeExitPts.Add(new PipeExit(voxelSpace[ru.i, ru.j, ru.k]));
-            ledPipeExitPts.Add(new PipeExit(voxelSpace[ll.i, ll.j, ll.k]));
-            ledPipeExitPts.Add(new PipeExit(voxelSpace[rl.i, rl.j, rl.k]));
+            ledPipeExitPts.Add(new PipeExit(voxelSpace[lu.i, lu.j, lu.k], leftUpperCorner));
+            ledPipeExitPts.Add(new PipeExit(voxelSpace[ru.i, ru.j, ru.k], rightUpperCorner));
+            ledPipeExitPts.Add(new PipeExit(voxelSpace[ll.i, ll.j, ll.k], leftLowerCorner));
+            ledPipeExitPts.Add(new PipeExit(voxelSpace[rl.i, rl.j, rl.k], rightLowerCorner));
 
             myDoc.Objects.AddPoint(leftUpperCorner);
             myDoc.Objects.AddPoint(rightUpperCorner);
@@ -1532,7 +1645,7 @@ namespace DynaModel_v2.Final_Stage
         /// </summary>
         /// <param name="customized_part">The customized part that user wants</param>
         /// <param name="currModel">current model that the user wants to add pipe into</param>
-        private List<Brep> CombineBreps(Brep customized_part, Brep currModel)
+        private List<BoundingBox> CombineBreps(Brep customized_part, Brep currModel)
         {
             List<Brep> breps = new List<Brep>();
             var allObjects = new List<RhinoObject>(myDoc.Objects.GetObjectList(ObjectType.Brep));
@@ -1555,7 +1668,7 @@ namespace DynaModel_v2.Final_Stage
 
             Sort.Quicksort(breps, 0, breps.Count - 1);
 
-            List<Brep> allTempBox = new List<Brep>();
+            List<BoundingBox> allTempBox = new List<BoundingBox>();
             for (int i = breps.Count - 1; i > 0; i--)
             {
                 for (int j = i - 1; j >= 0; j--)
@@ -1566,8 +1679,8 @@ namespace DynaModel_v2.Final_Stage
                         overlapBox = GetOverlapBoundingBox(breps[i], breps[j]);
                         if (overlapBox.ToBrep() != null)
                         {
-                            allTempBoxesGuid.Add(myDoc.Objects.Add(overlapBox.ToBrep()));
-                            allTempBox.Add(overlapBox.ToBrep());
+                            overlapBox.Inflate(7);
+                            allTempBox.Add(overlapBox);
                         }
                     }
                 }
@@ -1736,12 +1849,12 @@ namespace DynaModel_v2.Final_Stage
 
             #endregion
 
-            int count = 0;
-            foreach (var item in voxelSpace)
-            {
-                if (item.isTaken == false)
-                    count++;
-            }
+            //int count = 0;
+            //foreach (var item in voxelSpace)
+            //{
+            //    if (item.isTaken == false)
+            //        count++;
+            //}
 
 
             #region Perform A* algorithm

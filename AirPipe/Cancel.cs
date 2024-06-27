@@ -6,6 +6,7 @@ using Rhino.DocObjects;
 using Rhino;
 using Rhino.Geometry;
 using DynaModel_v2.SharedData;
+using System.Linq;
 
 namespace DynaModel_v2.AirPipe
 {
@@ -50,7 +51,8 @@ namespace DynaModel_v2.AirPipe
             {
                 var allObjects = new List<RhinoObject>(RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject));
                 foreach (var singleObject in allObjects)
-                    RhinoDoc.ActiveDoc.Objects.Delete(singleObject.Id, true);
+                    if (SavedItems.originalModelGuids.All(guid => guid != singleObject.Id))
+                        RhinoDoc.ActiveDoc.Objects.Delete(singleObject.Id, true);
                 foreach (var singleObject in SavedItems.originalModelGuids)
                     RhinoDoc.ActiveDoc.Objects.Show(singleObject, true);
             }

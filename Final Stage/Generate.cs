@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using DynaModel_v2.SharedData;
 using Grasshopper.Kernel;
+using Rhino;
 using Rhino.Geometry;
 
 namespace DynaModel_v2.Final_Stage
@@ -65,6 +66,11 @@ namespace DynaModel_v2.Final_Stage
                         Item item = SavedItems.items[i];
                         generateHelper.GenerateAirPipe(ref item, out List<Brep> subtrahends);
                     }
+                }
+                RhinoDoc.ActiveDoc.Objects.Add(generateHelper.foundation);
+                foreach(var item in generateHelper.toDelete)
+                {
+                    RhinoDoc.ActiveDoc.Objects.Add(item);
                 }
             }
 
