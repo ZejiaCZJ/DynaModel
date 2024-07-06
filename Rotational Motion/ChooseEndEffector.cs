@@ -37,6 +37,25 @@ namespace DynaModel_v2.Rotational_Motion
         private Brep second_driven_gear_top_gasket;
         private Brep second_driven_gear_bottom_gasket;
 
+        private Curve end_gear_shaft_clearance_rail;
+        private Curve shaft_clearance_rail;
+
+        private Curve end_gear_shaft_rail;
+        private Curve shaft_rail;
+
+        private Curve end_gear_top_gasket_rail;
+        private Curve end_gear_bottom_gasket_rail;
+
+        private Curve first_driven_gear_top_gasket_rail;
+        private Curve first_driven_gear_bottom_gasket_rail;
+
+        private Curve connector_gear_top_gasket_rail;
+        private Curve connector_gear_bottom_gasket_rail;
+
+        private Curve second_driven_gear_top_gasket_rail;
+        private Curve second_driven_gear_bottom_gasket_rail;
+
+
         public BevelGear EndGear { get => end_gear; set => end_gear = value; }
 
         public BevelGear FirstDrivenGear { get => first_driven_gear; set => first_driven_gear = value; }
@@ -64,6 +83,30 @@ namespace DynaModel_v2.Rotational_Motion
         public Brep ShaftClearance { get => shaft_clearance; set => shaft_clearance = value.DuplicateBrep(); }
 
         public Brep EndGearShaftClearance { get => end_gear_shaft_clearance; set => end_gear_shaft_clearance = value.DuplicateBrep(); }
+
+        public Curve EndGearShaftRail { get => end_gear_shaft_rail; set => end_gear_shaft_rail = value; }
+
+        public Curve ShaftRail { get => shaft_rail; set => shaft_rail = value; }
+
+        public Curve EndGearTopGasketRail { get => end_gear_top_gasket_rail; set => end_gear_top_gasket_rail = value; }
+
+        public Curve EndGearBottomGasketRail { get => end_gear_bottom_gasket_rail; set => end_gear_bottom_gasket_rail = value; }
+
+        public Curve FirstDrivenGearTopGasketRail { get => first_driven_gear_top_gasket_rail; set => first_driven_gear_top_gasket_rail = value; }
+
+        public Curve FirstDrivenGearBottomGasketRail { get => first_driven_gear_bottom_gasket_rail; set => first_driven_gear_bottom_gasket_rail = value; }
+
+        public Curve SecondDrivenGearTopGasketRail { get => second_driven_gear_top_gasket_rail; set => second_driven_gear_top_gasket_rail = value; }
+
+        public Curve SecondDrivenGearBottomGasketRail { get => second_driven_gear_bottom_gasket_rail; set => second_driven_gear_bottom_gasket_rail = value; }
+
+        public Curve ConnectorGearTopGasketRail { get => connector_gear_top_gasket_rail; set => connector_gear_top_gasket_rail = value; }
+
+        public Curve ConnectorGearBottomGasketRail { get => connector_gear_bottom_gasket_rail; set => connector_gear_bottom_gasket_rail = value; }
+
+        public Curve EndGearShaftClearanceRail { get => end_gear_shaft_clearance_rail; set => end_gear_shaft_clearance_rail = value; }
+
+        public Curve ShaftClearanceRail { get => shaft_clearance_rail; set => shaft_clearance_rail = value; }
     }
 
 
@@ -457,10 +500,12 @@ namespace DynaModel_v2.Rotational_Motion
                     #endregion
 
                     #region shafts of first driven gear and connector gear
+                    Line shaft_clearance_rail = new Line();
                     Line rail6 = new Line(new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Max.Z), new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
                     rail6.Extend(1, 1);
                     Brep shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                     rail6.Extend(1, 1);
+                    shaft_clearance_rail = rail6;
                     Brep shaft_clearance = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                     #endregion
 
@@ -496,6 +541,7 @@ namespace DynaModel_v2.Rotational_Motion
                     Brep end_gear_top_gasket = null;
                     Brep end_gear_shaft = null;
                     Brep end_gear_clearance_shaft = null;
+                    Line end_gear_clearance_shaft_rail = new Line();
                     if (Intersection.CurveBrep(extended_endEffector_rail.ToNurbsCurve(), end_gear.Boundingbox_big, myDoc.ModelAbsoluteTolerance, out _, out intersectionPoints))
                     {
                         Vector3d dir = endEffector_rail.Direction;
@@ -512,8 +558,8 @@ namespace DynaModel_v2.Rotational_Motion
                         end_gear_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                         distance += 2;
-                        rail6 = new Line(pointConnection1, end_gear_dir, distance);
-                        end_gear_clearance_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                        end_gear_clearance_shaft_rail = new Line(pointConnection1, end_gear_dir, distance);
+                        end_gear_clearance_shaft = Brep.CreatePipe(end_gear_clearance_shaft_rail.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                         //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                         //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_clearance_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                     }
@@ -558,6 +604,8 @@ namespace DynaModel_v2.Rotational_Motion
                                         gearSet.ShaftClearance = shaft_clearance;
                                         gearSet.Shaft = shaft;
                                         gearSet.SecondDrivenGear = second_driven_gear;
+                                        gearSet.EndGearShaftClearanceRail = end_gear_clearance_shaft_rail.ToNurbsCurve();
+                                        gearSet.ShaftClearanceRail = shaft_clearance_rail.ToNurbsCurve();
                                         workable_gearsets.Add(gearSet);
                                     }
                                 }
@@ -586,6 +634,8 @@ namespace DynaModel_v2.Rotational_Motion
                                     gearSet.ShaftClearance = shaft_clearance;
                                     gearSet.Shaft = shaft;
                                     gearSet.SecondDrivenGear = second_driven_gear;
+                                    gearSet.EndGearShaftClearanceRail = end_gear_clearance_shaft_rail.ToNurbsCurve();
+                                    gearSet.ShaftClearanceRail = shaft_clearance_rail.ToNurbsCurve();
                                     workable_gearsets.Add(gearSet);
                                 }
                             }
@@ -717,8 +767,8 @@ namespace DynaModel_v2.Rotational_Motion
                             end_gear_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                             distance += 2;
-                            rail6 = new Line(pointConnection1, end_gear_dir, distance);
-                            end_gear_clearance_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                            end_gear_clearance_shaft_rail = new Line(pointConnection1, end_gear_dir, distance);
+                            end_gear_clearance_shaft = Brep.CreatePipe(end_gear_clearance_shaft_rail.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                             //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                             //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_clearance_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                         }

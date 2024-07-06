@@ -49,13 +49,24 @@ namespace DynaModel_v2.Final_Stage
 
 
         //Gear parameter
-        private double start_gear_elevation = 2.5;
-        private double module = 1.5;
-        private double pressure_angle = 20;
-        private double thickness = 5;
-        private double ratio;
-        private double clearance = 0.5;
-        
+        private static double start_gear_elevation = 2.5;
+        private static double module = 1.5;
+        private static double pressure_angle = 20;
+        private static double thickness = 5;
+        private static double ratio;
+        private static double clearance = 0.5;
+        private static double clearance_shaft_radius = 3.8;
+        private static double shaft_radius = 1.5;
+        private static double shaft_extends_from_gear = 1;
+        private static double gasket_inner_radius = 1.9;
+        private static double gasket_outer_radius = 4;
+        private static double gasket_clearance_inner_radius = 2.3;
+        private static double gasket_clearance_outer_radius = clearance_shaft_radius;
+        private static double clearance_gasket_radius = 1.7;
+        private static double gasket_gear_gap = 0.6;
+        private static double bottom_gasket_gear_height = 2;
+        private static double top_gasket_gear_height = 3;
+
 
         //LED Light parameter
         private double pipeRadius = 3.5;
@@ -277,7 +288,7 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             #region Calculate the direction of the end gear that needs to be facing.
-            Vector3d end_gear_dir = save_item.gearEssentials.CutterPlane.Normal;
+            Vector3d end_gear_dir = new Vector3d(save_item.gearEssentials.CutterPlane.Normal);
             //double distance = pointConnection1.DistanceTo(mainModel.GetBoundingBox(true).Center);
             double distance = pointConnection1.DistanceTo(mainModel.ClosestPoint(pointConnection1)) + 1;
             Line endEffector_rail = new Line(pointConnection1, end_gear_dir, distance);
@@ -355,25 +366,25 @@ namespace DynaModel_v2.Final_Stage
             double first_driven_gear_selfRotAngle = 0;
             if (first_driven_gear_centerPoint.X > end_gear_centerPoint.X && first_driven_gear_centerPoint.Y < end_gear_centerPoint.Y)
             {
-                RhinoApp.WriteLine("first_driven_gear_centerPoint At fourth axis");
+                //RhinoApp.WriteLine("first_driven_gear_centerPoint At fourth axis");
                 first_driven_gear_selfRotAngle = -RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(1, 0, 0)));
                 end_gear.Rotate(first_driven_gear_selfRotAngle - 360 / first_driven_gear_teethNum / 2);
             }
             else if (first_driven_gear_centerPoint.X > end_gear_centerPoint.X && first_driven_gear_centerPoint.Y > end_gear_centerPoint.Y)
             {
-                RhinoApp.WriteLine("first_driven_gear_centerPoint At first axis");
+                //RhinoApp.WriteLine("first_driven_gear_centerPoint At first axis");
                 first_driven_gear_selfRotAngle = RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(1, 0, 0)));
                 end_gear.Rotate(first_driven_gear_selfRotAngle - 360 / first_driven_gear_teethNum / 2);
             }
             else if (first_driven_gear_centerPoint.X < end_gear_centerPoint.X && first_driven_gear_centerPoint.Y < end_gear_centerPoint.Y)
             {
-                RhinoApp.WriteLine("first_driven_gear_centerPoint At third axis");
+                //RhinoApp.WriteLine("first_driven_gear_centerPoint At third axis");
                 first_driven_gear_selfRotAngle = -RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(1, 0, 0)));
                 end_gear.Rotate(first_driven_gear_selfRotAngle - 360 / first_driven_gear_teethNum / 2);
             }
             else if (first_driven_gear_centerPoint.X < end_gear_centerPoint.X && first_driven_gear_centerPoint.Y > end_gear_centerPoint.Y)
             {
-                RhinoApp.WriteLine("first_driven_gear_centerPoint At second axis");
+                //RhinoApp.WriteLine("first_driven_gear_centerPoint At second axis");
                 first_driven_gear_selfRotAngle = RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(1, 0, 0)));
                 end_gear.Rotate(first_driven_gear_selfRotAngle - 360 / first_driven_gear_teethNum / 2);
             }
@@ -415,35 +426,36 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             #region shafts of first driven gear and connector gear
-            Line rail6 = new Line(new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Max.Z), new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
-            rail6.Extend(1, 1);
-            Brep shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-            rail6.Extend(1, 1);
-            Brep shaft_clearance = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Line shaft_rail = new Line(new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Max.Z), new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
+            shaft_rail.Extend(shaft_extends_from_gear, shaft_extends_from_gear);
+            Brep shaft = Brep.CreatePipe(shaft_rail.ToNurbsCurve(), shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Line shaft_clearance_rail = shaft_rail;
+            shaft_clearance_rail.Extend(shaft_extends_from_gear, shaft_extends_from_gear);
+            Brep shaft_clearance = Brep.CreatePipe(shaft_clearance_rail.ToNurbsCurve(), clearance_shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
             #endregion
 
             #region gaskets for first driven gear and connector gear
             //Gaskets of first driven gear
-            Point3d startPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - 2);
-            Point3d endPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - 0.3);
-            rail6 = new Line(startPoint, endPoint);
-            Brep first_driven_gear_bottom_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Point3d startPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
+            Point3d endPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - gasket_gear_gap);
+            Line first_driven_gear_bottom_gasket_rail = new Line(startPoint, endPoint);
+            Brep first_driven_gear_bottom_gasket = Brep.CreateThickPipe(first_driven_gear_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-            startPoint.Z = first_driven_gear.Boundingbox.Max.Z + 3;
-            endPoint.Z = first_driven_gear.Boundingbox.Max.Z + 0.3;
-            rail6 = new Line(startPoint, endPoint);
-            Brep first_driven_gear_top_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            startPoint.Z = first_driven_gear.Boundingbox.Max.Z + top_gasket_gear_height;
+            endPoint.Z = first_driven_gear.Boundingbox.Max.Z + gasket_gear_gap;
+            Line first_driven_gear_top_gasket_rail = new Line(startPoint, endPoint);
+            Brep first_driven_gear_top_gasket = Brep.CreateThickPipe(first_driven_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
             //Gaskets of connector gear
-            startPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - 2);
-            endPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - 0.3);
-            rail6 = new Line(startPoint, endPoint);
-            Brep connector_gear_bottom_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            startPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
+            endPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - gasket_gear_gap);
+            Line connector_gear_bottom_gasket_rail = new Line(startPoint, endPoint);
+            Brep connector_gear_bottom_gasket = Brep.CreateThickPipe(connector_gear_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-            startPoint.Z = connector_gear.Boundingbox.Max.Z + 3;
-            endPoint.Z = connector_gear.Boundingbox.Max.Z + 0.3;
-            rail6 = new Line(startPoint, endPoint);
-            Brep connector_gear_top_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            startPoint.Z = connector_gear.Boundingbox.Max.Z + top_gasket_gear_height;
+            endPoint.Z = connector_gear.Boundingbox.Max.Z + gasket_gear_gap;
+            Line connector_gear_top_gasket_rail = new Line(startPoint, endPoint);
+            Brep connector_gear_top_gasket = Brep.CreateThickPipe(connector_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
             #endregion
 
             #region gaskets and shafts for end gear
@@ -454,31 +466,35 @@ namespace DynaModel_v2.Final_Stage
             Brep end_gear_top_gasket = null;
             Brep end_gear_shaft = null;
             Brep end_gear_clearance_shaft = null;
+            Line end_gear_shaft_rail = new Line();
+            Line end_gear_shaft_clearance_rail = new Line();
+            Line end_gear_bottom_gakset_rail = new Line();
+            Line end_gear_top_gasket_rail = new Line();
             if (Intersection.CurveBrep(extended_endEffector_rail.ToNurbsCurve(), end_gear.Boundingbox_big, myDoc.ModelAbsoluteTolerance, out _, out intersectionPoints))
             {
                 Vector3d dir = endEffector_rail.Direction;
-                Line r1 = new Line(intersectionPoints[0], dir, 1.7);
+                end_gear_bottom_gakset_rail = new Line(intersectionPoints[0], dir, bottom_gasket_gear_height - gasket_gear_gap);
                 dir.Reverse();
-                Line r2 = new Line(intersectionPoints[1], dir, 2.7);
-                end_gear_bottom_gasket = Brep.CreateThickPipe(r1.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                end_gear_top_gasket = Brep.CreateThickPipe(r2.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                end_gear_top_gasket_rail = new Line(intersectionPoints[1], dir, top_gasket_gear_height - gasket_gear_gap);
+                end_gear_bottom_gasket = Brep.CreateThickPipe(end_gear_bottom_gakset_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                end_gear_top_gasket = Brep.CreateThickPipe(end_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                 //myDoc.Objects.Add(end_gear_bottom_gasket);
                 //myDoc.Objects.Add(end_gear_top_gasket);
 
                 distance = pointConnection1.DistanceTo(intersectionPoints[1]) - 1;
-                rail6 = new Line(pointConnection1, end_gear_dir, distance);
-                end_gear_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                end_gear_shaft_rail = new Line(pointConnection1, end_gear_dir, distance);
+                end_gear_shaft = Brep.CreatePipe(end_gear_shaft_rail.ToNurbsCurve(), shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                 distance += 2;
-                rail6 = new Line(pointConnection1, end_gear_dir, distance);
-                end_gear_clearance_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                end_gear_shaft_clearance_rail = new Line(pointConnection1, end_gear_dir, distance);
+                end_gear_clearance_shaft = Brep.CreatePipe(end_gear_shaft_clearance_rail.ToNurbsCurve(), clearance_shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                 //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                 //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_clearance_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
             }
             #endregion
 
+            
             List<GearSet> workable_gearsets = new List<GearSet>();
-
 
             #region keep pushing the end gear inside of the model until it doesn't intersect with the model and it will be placed on the correct location where the connector gear will be appropriate in size and 
             while (Intersection.BrepBrep(end_gear.Boundingbox_big, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints) && Intersection.BrepBrep(end_gear.Model, start_gear.Model, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves2, out Point3d[] intersectionPoints2)
@@ -514,6 +530,16 @@ namespace DynaModel_v2.Final_Stage
                                 gearSet.SecondDrivenGear = second_driven_gear;
                                 gearSet.EndGearShaftClearance = end_gear_clearance_shaft;
                                 gearSet.ShaftClearance = shaft_clearance;
+                                gearSet.ShaftRail = shaft_rail.ToNurbsCurve();
+                                gearSet.EndGearShaftRail = end_gear_shaft_rail.ToNurbsCurve();
+                                gearSet.EndGearBottomGasketRail = end_gear_bottom_gakset_rail.ToNurbsCurve();
+                                gearSet.EndGearTopGasketRail = end_gear_top_gasket_rail.ToNurbsCurve();
+                                gearSet.FirstDrivenGearBottomGasketRail = first_driven_gear_bottom_gasket_rail.ToNurbsCurve();
+                                gearSet.FirstDrivenGearTopGasketRail = first_driven_gear_top_gasket_rail.ToNurbsCurve();
+                                gearSet.ConnectorGearBottomGasketRail = connector_gear_bottom_gasket_rail.ToNurbsCurve();
+                                gearSet.ConnectorGearTopGasketRail = connector_gear_top_gasket_rail.ToNurbsCurve();
+                                gearSet.EndGearShaftClearanceRail = end_gear_shaft_clearance_rail.ToNurbsCurve();
+                                gearSet.ShaftClearanceRail = shaft_clearance_rail.ToNurbsCurve();
                                 workable_gearsets.Add(gearSet);
                             }
                         }
@@ -542,6 +568,17 @@ namespace DynaModel_v2.Final_Stage
                             gearSet.SecondDrivenGear = second_driven_gear;
                             gearSet.EndGearShaftClearance = end_gear_clearance_shaft;
                             gearSet.ShaftClearance = shaft_clearance;
+                            gearSet.ShaftRail = shaft_rail.ToNurbsCurve();
+                            gearSet.EndGearShaftRail = end_gear_shaft_rail.ToNurbsCurve();
+                            gearSet.EndGearShaftRail = end_gear_shaft_rail.ToNurbsCurve();
+                            gearSet.EndGearBottomGasketRail = end_gear_bottom_gakset_rail.ToNurbsCurve();
+                            gearSet.EndGearTopGasketRail = end_gear_top_gasket_rail.ToNurbsCurve();
+                            gearSet.FirstDrivenGearBottomGasketRail = first_driven_gear_bottom_gasket_rail.ToNurbsCurve();
+                            gearSet.FirstDrivenGearTopGasketRail = first_driven_gear_top_gasket_rail.ToNurbsCurve();
+                            gearSet.ConnectorGearBottomGasketRail = connector_gear_bottom_gasket_rail.ToNurbsCurve();
+                            gearSet.ConnectorGearTopGasketRail = connector_gear_top_gasket_rail.ToNurbsCurve();
+                            gearSet.EndGearShaftClearanceRail = end_gear_shaft_clearance_rail.ToNurbsCurve();
+                            gearSet.ShaftClearanceRail = shaft_clearance_rail.ToNurbsCurve();
                             workable_gearsets.Add(gearSet);
                         }
                     }
@@ -601,32 +638,33 @@ namespace DynaModel_v2.Final_Stage
                 }
 
                 //Adjust the shaft and gaskets for connector gear and first driven gear
-                rail6 = new Line(new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Max.Z), new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
-                rail6.Extend(1, 1);
-                shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                rail6.Extend(1, 1);
-                shaft_clearance = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                shaft_rail = new Line(new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Max.Z), new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
+                shaft_rail.Extend(shaft_extends_from_gear, shaft_extends_from_gear);
+                shaft = Brep.CreatePipe(shaft_rail.ToNurbsCurve(), shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                shaft_clearance_rail = shaft_rail;
+                shaft_clearance_rail.Extend(shaft_extends_from_gear, shaft_extends_from_gear);
+                shaft_clearance = Brep.CreatePipe(shaft_clearance_rail.ToNurbsCurve(), clearance_shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-                startPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - 2);
-                endPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - 0.3);
-                rail6 = new Line(startPoint, endPoint);
-                first_driven_gear_bottom_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                startPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
+                endPoint = new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, first_driven_gear.Boundingbox.Min.Z - gasket_gear_gap);
+                first_driven_gear_bottom_gasket_rail = new Line(startPoint, endPoint);
+                first_driven_gear_bottom_gasket = Brep.CreateThickPipe(first_driven_gear_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-                startPoint.Z = first_driven_gear.Boundingbox.Max.Z + 3;
-                endPoint.Z = first_driven_gear.Boundingbox.Max.Z + 0.3;
-                rail6 = new Line(startPoint, endPoint);
-                first_driven_gear_top_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                startPoint.Z = first_driven_gear.Boundingbox.Max.Z + top_gasket_gear_height;
+                endPoint.Z = first_driven_gear.Boundingbox.Max.Z + gasket_gear_gap;
+                first_driven_gear_top_gasket_rail = new Line(startPoint, endPoint);
+                first_driven_gear_top_gasket = Brep.CreateThickPipe(first_driven_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                 //Gaskets of connector gear
-                startPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - 2);
-                endPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - 0.3);
-                rail6 = new Line(startPoint, endPoint);
-                connector_gear_bottom_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                startPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
+                endPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - gasket_gear_gap);
+                connector_gear_bottom_gasket_rail = new Line(startPoint, endPoint);
+                connector_gear_bottom_gasket = Brep.CreateThickPipe(connector_gear_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-                startPoint.Z = connector_gear.Boundingbox.Max.Z + 3;
-                endPoint.Z = connector_gear.Boundingbox.Max.Z + 0.3;
-                rail6 = new Line(startPoint, endPoint);
-                connector_gear_top_gasket = Brep.CreateThickPipe(rail6.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                startPoint.Z = connector_gear.Boundingbox.Max.Z + top_gasket_gear_height;
+                endPoint.Z = connector_gear.Boundingbox.Max.Z + gasket_gear_gap;
+                connector_gear_top_gasket_rail = new Line(startPoint, endPoint);
+                connector_gear_top_gasket = Brep.CreateThickPipe(connector_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                 //Adjust the shaft and gasket for end gear 
                 extended_endEffector_rail = endEffector_rail;
@@ -648,29 +686,29 @@ namespace DynaModel_v2.Final_Stage
                     }
 
 
-                    Line r1 = new Line(bottomPoint, dir, 1.7);
+                    end_gear_bottom_gakset_rail = new Line(bottomPoint, dir, bottom_gasket_gear_height - gasket_gear_gap);
                     dir.Reverse();
-                    Line r2 = new Line(topPoint, dir, 2.7);
+                    end_gear_top_gasket_rail = new Line(topPoint, dir, top_gasket_gear_height - gasket_gear_gap);
 
                     if (isReversed)
                     {
                         dir.Reverse();
-                        r1 = new Line(bottomPoint, dir, 2.7);
+                        end_gear_bottom_gakset_rail = new Line(bottomPoint, dir, top_gasket_gear_height - gasket_gear_gap);
                         dir.Reverse();
-                        r2 = new Line(topPoint, dir, 1.7);
+                        end_gear_top_gasket_rail = new Line(topPoint, dir, bottom_gasket_gear_height - gasket_gear_gap);
                     }
 
 
-                    end_gear_bottom_gasket = Brep.CreateThickPipe(r1.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                    end_gear_top_gasket = Brep.CreateThickPipe(r2.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    end_gear_bottom_gasket = Brep.CreateThickPipe(end_gear_bottom_gakset_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    end_gear_top_gasket = Brep.CreateThickPipe(end_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                     distance = pointConnection1.DistanceTo(topPoint) - 1;
-                    rail6 = new Line(pointConnection1, end_gear_dir, distance);
-                    end_gear_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    end_gear_shaft_rail = new Line(pointConnection1, end_gear_dir, distance);
+                    end_gear_shaft = Brep.CreatePipe(end_gear_shaft_rail.ToNurbsCurve(), shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                     distance += 2;
-                    rail6 = new Line(pointConnection1, end_gear_dir, distance);
-                    end_gear_clearance_shaft = Brep.CreatePipe(rail6.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    end_gear_shaft_clearance_rail = new Line(pointConnection1, end_gear_dir, distance);
+                    end_gear_clearance_shaft = Brep.CreatePipe(end_gear_shaft_clearance_rail.ToNurbsCurve(), clearance_shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                     //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                     //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear_clearance_shaft, myDoc.ModelAbsoluteTolerance, false)[0];
                 }
@@ -741,47 +779,135 @@ namespace DynaModel_v2.Final_Stage
                 }
             }
 
-            myDoc.Objects.Add(bestGearSet.FirstDrivenGearBottomGasket);
-            myDoc.Objects.Add(bestGearSet.FirstDrivenGearTopGasket);
-            myDoc.Objects.Add(bestGearSet.ConnectorGearBottomGasket);
-            myDoc.Objects.Add(bestGearSet.ConnectorGearTopGasket);
-
             myDoc.Objects.Add(bestGearSet.EndGear.Model);
             myDoc.Objects.Add(bestGearSet.FirstDrivenGear.Model);
             myDoc.Objects.Add(bestGearSet.ConnectorGear.Model);
 
+            myDoc.Objects.Add(bestGearSet.Shaft);
+            specialPipes.Add(myDoc.Objects.Add(bestGearSet.EndGearShaft));
+
+            myDoc.Objects.Add(bestGearSet.FirstDrivenGearBottomGasket);
+            myDoc.Objects.Add(bestGearSet.FirstDrivenGearTopGasket);
+            myDoc.Objects.Add(bestGearSet.ConnectorGearBottomGasket);
+            myDoc.Objects.Add(bestGearSet.ConnectorGearTopGasket);
             myDoc.Objects.Add(bestGearSet.EndGearBottomGasket);
             myDoc.Objects.Add(bestGearSet.EndGearTopGasket);
 
+            //Create holes on gaskets to allow more water flow
+            List<Curve> rails = new List<Curve>();
+            rails.Add(bestGearSet.EndGearBottomGasketRail);
+            rails.Add(bestGearSet.EndGearTopGasketRail);
+            rails.Add(bestGearSet.FirstDrivenGearBottomGasketRail);
+            rails.Add(bestGearSet.FirstDrivenGearTopGasketRail);
+            rails.Add(bestGearSet.ConnectorGearBottomGasketRail);
+            rails.Add(bestGearSet.ConnectorGearTopGasketRail);
+
+            List<Brep> modified_gaskets = new List<Brep>();
+            modified_gaskets.Add(bestGearSet.EndGearBottomGasket);
+            modified_gaskets.Add(bestGearSet.EndGearTopGasket);
+            modified_gaskets.Add(bestGearSet.FirstDrivenGearBottomGasket);
+            modified_gaskets.Add(bestGearSet.FirstDrivenGearTopGasket);
+            modified_gaskets.Add(bestGearSet.ConnectorGearBottomGasket);
+            modified_gaskets.Add(bestGearSet.ConnectorGearTopGasket);
+
+            foreach (Curve c in rails)
+            {
+                Circle hole1 = new Circle(new Plane(c.PointAtEnd, c.TangentAtEnd), (clearance_shaft_radius - gasket_inner_radius) / 2 + gasket_inner_radius);
+                Circle hole2 = new Circle(new Plane(c.PointAtStart, c.TangentAtStart), (clearance_shaft_radius - gasket_inner_radius) / 2 + gasket_inner_radius);
+                Double[] points1 = hole1.ToNurbsCurve().DivideByLength(2.5, false, out Point3d[] temp_points);
+                Double[] points2 = hole2.ToNurbsCurve().DivideByLength(2.5, false, out Point3d[] temp_points2);
+
+                for (int i = 0; i < temp_points.Length; i++)
+                {
+                    Line temp_line = new Line(temp_points[i], temp_points2[i]);
+
+                    //Extend the line into the foundation if the connector gear bottom gasket is on top of the foundation
+                    if(c.Equals(bestGearSet.ConnectorGearBottomGasketRail))
+                    {
+                        BoundingBox b = foundation.GetBoundingBox(true);
+                        if (temp_points[i].X < b.Max.X-0.5 && temp_points[i].Y < b.Max.Y-0.5 && temp_points[i].X > b.Min.X+0.5 && temp_points[i].Y > b.Min.Y+0.5)
+                            temp_line.ExtendThroughBox(b);
+                    }
+
+                    Brep pipe = Brep.CreatePipe(temp_line.ToNurbsCurve(), 0.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    myDoc.Objects.Add(pipe);
+                }
+            }
+
+            if (Intersection.CurveBrep(bestGearSet.EndGearShaftRail, currModel, myDoc.ModelAbsoluteTolerance, out Curve[] overlapCurves, out intersectionPoints, out Double[] curveParameters))
+            {
+                Curve cover_rail = (new Line(intersectionPoints[0], end_gear_dir, bestGearSet.EndGearShaftRail.GetLength() / 5)).ToNurbsCurve();
+                Brep cover = Brep.CreateThickPipe(cover_rail, gasket_inner_radius,clearance_shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(cover);
+                Circle hole1 = new Circle(new Plane(cover_rail.PointAtEnd, cover_rail.TangentAtEnd), (clearance_shaft_radius - gasket_inner_radius) / 2 + gasket_inner_radius);
+                Circle hole2 = new Circle(new Plane(cover_rail.PointAtStart, cover_rail.TangentAtStart), (clearance_shaft_radius - gasket_inner_radius) / 2 + gasket_inner_radius);
+                Double[] points1 = hole1.ToNurbsCurve().DivideByLength(2.5, false, out Point3d[] temp_points);
+                Double[] points2 = hole2.ToNurbsCurve().DivideByLength(2.5, false, out Point3d[] temp_points2);
+                for (int i = 0; i < temp_points.Length; i++)
+                {
+                    Line temp_line = new Line(temp_points[i], temp_points2[i]);
+                    Brep pipe = Brep.CreatePipe(temp_line.ToNurbsCurve(), 0.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    myDoc.Objects.Add(pipe);
+                }
+            }
+
+
+            //myDoc.Objects.Add(bestGearSet.EndGearBottomGasketRail);
+            //myDoc.Objects.Add(bestGearSet.EndGearTopGasketRail);
+            //myDoc.Objects.Add(bestGearSet.FirstDrivenGearBottomGasketRail);
+            //myDoc.Objects.Add(bestGearSet.FirstDrivenGearTopGasketRail);
+            //myDoc.Objects.Add(bestGearSet.ConnectorGearBottomGasketRail);
+            //myDoc.Objects.Add(bestGearSet.ConnectorGearTopGasketRail);
+            //myDoc.Objects.Add(bestGearSet.ShaftRail);
+            //myDoc.Objects.Add(bestGearSet.EndGearShaftRail);
+            //myDoc.Objects.Add(bestGearSet.EndGearShaftClearanceRail);
+            //myDoc.Objects.Add(bestGearSet.ShaftClearanceRail);
+
+
+
+
+
             //Second driven gear, gasket and shaft
+            Line second_driven_top_gasket_rail = new Line();
+            Line second_driven_bottom_gasket_rail = new Line();
+            Line second_driven_shaft_rail = new Line();
+            Line second_driven_shaft_clearance_rail = new Line();
             if (bestGearSet.SecondDrivenGear != null)
             {
+                //Model
                 myDoc.Objects.Add(bestGearSet.SecondDrivenGear.Model);
-                Point3d bottom = new Point3d(bestGearSet.SecondDrivenGear.CenterPoint);
-                bottom.Z = bottom.Z - 0.3;
-                rail5 = new Line(bottom, new Point3d(bottom.X, bottom.Y, bottom.Z - 2));
-                Brep b = Brep.CreateThickPipe(rail5.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                myDoc.Objects.Add(b);
-                bottom.Z = bottom.Z + thickness + 0.6;
-                rail5 = new Line(bottom, new Point3d(bottom.X, bottom.Y, bottom.Z + 3));
-                b = Brep.CreateThickPipe(rail5.ToNurbsCurve(), 1.7, 4, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                myDoc.Objects.Add(b);
-                Point3d top = new Point3d(bottom.X, bottom.Y, bottom.Z + 2);
-                bottom = new Point3d(bestGearSet.SecondDrivenGear.CenterPoint);
-                bottom.Z = bottom.Z - 1;
-                rail5 = new Line(top, bottom);
-                b = Brep.CreatePipe(rail5.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                myDoc.Objects.Add(b);
-                b = Brep.CreatePipe(rail5.ToNurbsCurve(), 1.7, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                myDoc.Objects.Add(b);
+
+                //Gasket
+                Point3d start_point = new Point3d(bestGearSet.SecondDrivenGear.CenterPoint);
+                start_point.Z = bestGearSet.SecondDrivenGear.Model.GetBoundingBox(true).Min.Z - gasket_gear_gap;
+                Point3d end_point = new Point3d(bestGearSet.SecondDrivenGear.CenterPoint);
+                end_point.Z = bestGearSet.SecondDrivenGear.Model.GetBoundingBox(true).Min.Z - bottom_gasket_gear_height;
+                second_driven_bottom_gasket_rail = new Line(start_point, end_point);
+                Brep second_driven_gear_bottom_gasket = Brep.CreateThickPipe(second_driven_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(second_driven_gear_bottom_gasket);
+                myDoc.Objects.AddCurve(second_driven_bottom_gasket_rail.ToNurbsCurve());
+
+                start_point.Z = bestGearSet.SecondDrivenGear.Model.GetBoundingBox(true).Max.Z + gasket_gear_gap;
+                end_point.Z = bestGearSet.SecondDrivenGear.Model.GetBoundingBox(true).Max.Z + top_gasket_gear_height;
+                second_driven_top_gasket_rail = new Line(start_point, end_point);
+                Brep second_driven_top_gasket = Brep.CreateThickPipe(second_driven_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(second_driven_top_gasket);
+                myDoc.Objects.AddCurve(second_driven_top_gasket_rail.ToNurbsCurve());
+
+
+                //shaft
+                start_point.Z = bestGearSet.SecondDrivenGear.Model.GetBoundingBox(true).Max.Z + shaft_extends_from_gear;
+                end_point.Z = bestGearSet.SecondDrivenGear.Model.GetBoundingBox(true).Min.Z - shaft_extends_from_gear;
+                second_driven_shaft_rail = new Line(start_point, end_point);
+                Brep second_driven_gear_shaft = Brep.CreatePipe(second_driven_shaft_rail.ToNurbsCurve(), shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(second_driven_gear_shaft);
+
+                second_driven_shaft_clearance_rail = second_driven_shaft_rail;
+                second_driven_shaft_clearance_rail.Extend(shaft_extends_from_gear, shaft_extends_from_gear);
+                Brep second_driven_gear_shaft_clearance = Brep.CreatePipe(second_driven_shaft_clearance_rail.ToNurbsCurve(), clearance_shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                myDoc.Objects.Add(second_driven_gear_shaft_clearance);
             }
-                
-            
 
-
-
-            myDoc.Objects.Add(bestGearSet.Shaft);
-            specialPipes.Add(myDoc.Objects.Add(bestGearSet.EndGearShaft));
             myDoc.Objects.Add(start_gear.Model);
 
             //Start gear boundingbox
@@ -832,17 +958,15 @@ namespace DynaModel_v2.Final_Stage
             }
 
             voxelSpace = null;
-            GetVoxelSpace(currModel, 1, customized_part);
-
             Point3d pipeExit = new Point3d(foundation_origin.X + 72.5, foundation_origin.Y + 63, foundation_origin.Z + foundation_height - 1);
+
+            GetVoxelSpace(currModel, 1, customized_part);
 
             Index base_part_center_index = FindClosestPointIndex(pipeExit, currModel);
 
             Voxel goal = voxelSpace[base_part_center_index.i, base_part_center_index.j, base_part_center_index.k];
 
-            myDoc.Objects.AddPoint(pipeExit);
-
-            if(goal.isTaken)
+            if (goal.isTaken)
             {
                 RhinoApp.WriteLine("The air pipe exit is taken. Cannot generate air pipe!");
                 return false;
@@ -852,72 +976,73 @@ namespace DynaModel_v2.Final_Stage
             //Method 1: use A* directly
             List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
             Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
+            myDoc.Objects.Add(bestRoute);
 
-            //Method 2: use a portion of the lightPipe directly.
-            Curve bestStartRoute = bestRoute;
-            Curve bestEndRoute = bestRoute;
+            ////Method 2: use a portion of the lightPipe directly.
+            //Curve bestStartRoute = bestRoute;
+            //Curve bestEndRoute = bestRoute;
 
-            if (combinableLightPipeRoute.Count > 0)
-            {
-                Curve bestMiddleRoute = bestRoute;
-                int closestIndex = -1;
-                double closestDistance = pipeExit.DistanceToSquared(customized_part_center);
-                for (int i = 0; i < combinableLightPipe.Count; i++)
-                {
-                    Point3d head = combinableLightPipeRoute[i].PointAtEnd;
-                    double thisDistance = head.DistanceToSquared(customized_part_center);
-                    if (thisDistance < closestDistance)
-                    {
-                        closestIndex = i;
-                        closestDistance = thisDistance;
-                        bestMiddleRoute = combinableLightPipeRoute[i];
-                    }
-                }
-                voxelSpace = null;
-                myDoc.Objects.Delete(conductiveObjects[closestIndex].guid, true);
-                GetVoxelSpace(currModel, 1, combinableLightPipe[closestIndex]);
-                bestMiddleRoute = bestMiddleRoute.Trim(CurveEnd.End, 7);
-                bestMiddleRoute = bestMiddleRoute.Trim(CurveEnd.Start, 7);
+            //if (combinableLightPipeRoute.Count > 0)
+            //{
+            //    Curve bestMiddleRoute = bestRoute;
+            //    int closestIndex = -1;
+            //    double closestDistance = pipeExit.DistanceToSquared(customized_part_center);
+            //    for (int i = 0; i < combinableLightPipe.Count; i++)
+            //    {
+            //        Point3d head = combinableLightPipeRoute[i].PointAtEnd;
+            //        double thisDistance = head.DistanceToSquared(customized_part_center);
+            //        if (thisDistance < closestDistance)
+            //        {
+            //            closestIndex = i;
+            //            closestDistance = thisDistance;
+            //            bestMiddleRoute = combinableLightPipeRoute[i];
+            //        }
+            //    }
+            //    voxelSpace = null;
+            //    myDoc.Objects.Delete(conductiveObjects[closestIndex].guid, true);
+            //    GetVoxelSpace(currModel, 1, combinableLightPipe[closestIndex]);
+            //    bestMiddleRoute = bestMiddleRoute.Trim(CurveEnd.End, 7);
+            //    bestMiddleRoute = bestMiddleRoute.Trim(CurveEnd.Start, 7);
 
-                List<Point3d> bestStartPath = FindShortestPath(customized_part_center, bestMiddleRoute.PointAtEnd, customized_part, currModel, 2);
-                List<Point3d> bestEndPath = FindShortestPath(bestMiddleRoute.PointAtStart, pipeExit, customized_part, currModel, 2);
-                bestStartRoute = Curve.CreateInterpolatedCurve(bestStartPath, 1);
-                bestEndRoute = Curve.CreateInterpolatedCurve(bestEndPath, 1);
-                //myDoc.Objects.Add(bestStartRoute, soluableAttribute);
-                //myDoc.Objects.Add(bestEndRoute, lightGuideAttribute);
-                conductiveObjects[closestIndex].guid = myDoc.Objects.Add(conductiveObjects[closestIndex].brep, redAttribute);
-            }
+            //    List<Point3d> bestStartPath = FindShortestPath(customized_part_center, bestMiddleRoute.PointAtEnd, customized_part, currModel, 2);
+            //    List<Point3d> bestEndPath = FindShortestPath(bestMiddleRoute.PointAtStart, pipeExit, customized_part, currModel, 2);
+            //    bestStartRoute = Curve.CreateInterpolatedCurve(bestStartPath, 1);
+            //    bestEndRoute = Curve.CreateInterpolatedCurve(bestEndPath, 1);
+            //    //myDoc.Objects.Add(bestStartRoute, soluableAttribute);
+            //    //myDoc.Objects.Add(bestEndRoute, lightGuideAttribute);
+            //    conductiveObjects[closestIndex].guid = myDoc.Objects.Add(conductiveObjects[closestIndex].brep, redAttribute);
+            //}
 
-            #endregion
+            //#endregion
 
-            #region Find the shortest route to create the air pipe
-            double totalDistance = bestStartRoute.GetLength() + bestEndRoute.GetLength();
-            if (bestRoute.GetLength() < totalDistance)
-            {
-                bestRoute = bestRoute.Trim(CurveEnd.End, 7);
-                bestRoute = bestRoute.Trim(CurveEnd.Start, 7);
-                Circle edgeAtStart = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3.2);
-                Circle edgeAtEnd = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3.2);
-                //Create method 1 pipe 
-                Brep[] airPipe = Brep.CreatePipe(bestRoute, 3.2, true, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+            //#region Find the shortest route to create the air pipe
+            //double totalDistance = bestStartRoute.GetLength() + bestEndRoute.GetLength();
+            //if (bestRoute.GetLength() < totalDistance)
+            //{
+            //    bestRoute = bestRoute.Trim(CurveEnd.End, 7);
+            //    bestRoute = bestRoute.Trim(CurveEnd.Start, 7);
+            //    Circle edgeAtStart = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3.2);
+            //    Circle edgeAtEnd = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3.2);
+            //    //Create method 1 pipe 
+            //    Brep[] airPipe = Brep.CreatePipe(bestRoute, 3.2, true, PipeCapMode.Flat, false, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
-                Circle pipeStartEdge = new Circle(pipeExit, 3.2);
-                Curve pipeEndEdge = intersectionCurves[0];
+            //    Circle pipeStartEdge = new Circle(pipeExit, 3.2);
+            //    Curve pipeEndEdge = intersectionCurves[0];
 
 
 
-                //airPipe = Brep.CreateBooleanSplit(airPipe[0], currModel, myDoc.ModelAbsoluteTolerance);
-                myDoc.Objects.Add(airPipe[0], solidAttribute);
-            }
-            else
-            {
-                Brep[] airPipe1 = Brep.CreatePipe(bestStartRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
-                Brep[] airPipe2 = Brep.CreatePipe(bestEndRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
-                airPipe1 = Brep.CreateBooleanSplit(airPipe1[0], currModel, myDoc.ModelAbsoluteTolerance);
-                airPipe2 = Brep.CreateBooleanSplit(airPipe2[0], currModel, myDoc.ModelAbsoluteTolerance);
-                myDoc.Objects.Add(airPipe1[0], solidAttribute);
-                myDoc.Objects.Add(airPipe2[0], solidAttribute);
-            }
+            //    //airPipe = Brep.CreateBooleanSplit(airPipe[0], currModel, myDoc.ModelAbsoluteTolerance);
+            //    myDoc.Objects.Add(airPipe[0], solidAttribute);
+            //}
+            //else
+            //{
+            //    Brep[] airPipe1 = Brep.CreatePipe(bestStartRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+            //    Brep[] airPipe2 = Brep.CreatePipe(bestEndRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+            //    airPipe1 = Brep.CreateBooleanSplit(airPipe1[0], currModel, myDoc.ModelAbsoluteTolerance);
+            //    airPipe2 = Brep.CreateBooleanSplit(airPipe2[0], currModel, myDoc.ModelAbsoluteTolerance);
+            //    myDoc.Objects.Add(airPipe1[0], solidAttribute);
+            //    myDoc.Objects.Add(airPipe2[0], solidAttribute);
+            //}
             #endregion
 
             myDoc.Views.Redraw();
