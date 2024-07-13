@@ -60,8 +60,7 @@ namespace DynaModel_v2.Light_Pipe
                 var allObjects = new List<RhinoObject>(RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject));
                 foreach (var singleObject in allObjects)
                     RhinoDoc.ActiveDoc.Objects.Delete(singleObject.Id, true);
-                foreach (var singleObject in SavedItems.originalModelGuids)
-                    RhinoDoc.ActiveDoc.Objects.Show(singleObject, true);
+                RhinoDoc.ActiveDoc.Objects.Show(SavedItems.originalModelGuids[0], true);
 
                 //Triggers the list to update itself
                 GH_Document ghDoc = Grasshopper.Instances.ActiveCanvas.Document;

@@ -13,7 +13,7 @@ namespace DynaModel_v2.SharedData
         public static List<Item> items;
         private static int itemsCount;
         public static List<String> itemsNames;
-        public static List<Guid> originalModelGuids;
+        public static List<Guid> originalModelGuids = new List<Guid>();
         public static Guid instanceID;
 
 
@@ -29,9 +29,28 @@ namespace DynaModel_v2.SharedData
             items = new List<Item>();
             itemsCount = 0;
             itemsNames = new List<String>();
-            originalModelGuids = new List<Guid>();
-            foreach (var guid in RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.Brep))
-                originalModelGuids.Add(guid.Id);
+            
+            if(originalModelGuids.Count == 0)
+            {
+                var allObjects = RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.Brep);
+                foreach (var guid in RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.Brep))
+                {
+                    originalModelGuids.Add(guid.Id);
+                }
+
+                ObjRef first = new ObjRef(RhinoDoc.ActiveDoc, originalModelGuids[0]);
+                ObjRef second = new ObjRef(RhinoDoc.ActiveDoc, originalModelGuids[1]);
+
+                if (first.Brep().GetVolume() < second.Brep().GetVolume())
+                {
+                    Guid temp = first.ObjectId;
+                    originalModelGuids[0] = originalModelGuids[1];
+                    originalModelGuids[1] = temp;
+                }
+
+                RhinoDoc.ActiveDoc.Objects.Hide(originalModelGuids[1], true);
+            }
+            
         }
 
         /// <summary>

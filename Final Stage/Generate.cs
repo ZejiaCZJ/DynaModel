@@ -67,8 +67,8 @@ namespace DynaModel_v2.Final_Stage
                         generateHelper.GenerateAirPipe(ref item, out List<Brep> subtrahends);
                     }
                 }
-                RhinoDoc.ActiveDoc.Objects.Add(generateHelper.foundation);
-                foreach(var item in generateHelper.toDelete)
+                //RhinoDoc.ActiveDoc.Objects.Add(generateHelper.foundation);
+                foreach (var item in generateHelper.toDelete)
                 {
                     RhinoDoc.ActiveDoc.Objects.Add(item);
                 }
