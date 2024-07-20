@@ -240,20 +240,76 @@ namespace DynaModel_v2.Final_Stage
                 return false;
 
             //Update current model
-            if (cuttedBrep[0].Equals(endEffector))
+            if (cuttedBrep[0].GetVolume() - endEffector.GetVolume() < 10)
             {
                 currModel = cuttedBrep[1];
-                currModel_Hollowed = cuttedBrep2[1];
-                endEffector_Hollowed = cuttedBrep2[0];
+
+                if (currModel.GetVolume() > endEffector.GetVolume())
+                {
+                    if (cuttedBrep2[0].GetVolume() > cuttedBrep2[1].GetVolume())
+                    {
+                        currModel_Hollowed = cuttedBrep2[0];
+                        endEffector_Hollowed = cuttedBrep2[1];
+                    }
+                    else
+                    {
+                        currModel_Hollowed = cuttedBrep2[1];
+                        endEffector_Hollowed = cuttedBrep2[0];
+                    }
+                }
+                else
+                {
+                    if (cuttedBrep2[0].GetVolume() > cuttedBrep2[0].GetVolume())
+                    {
+                        currModel_Hollowed = cuttedBrep2[1];
+                        endEffector_Hollowed = cuttedBrep2[0];
+                    }
+                    else
+                    {
+                        currModel_Hollowed = cuttedBrep2[0];
+                        endEffector_Hollowed = cuttedBrep2[1];
+                    }
+                }
             }
             else
             {
                 currModel = cuttedBrep[0];
-                currModel_Hollowed = cuttedBrep2[0];
+
                 if (cuttedBrep2.Length >= 2)
-                    endEffector_Hollowed = cuttedBrep2[1];
+                {
+                    if (currModel.GetVolume() > endEffector.GetVolume())
+                    {
+                        if (cuttedBrep2[0].GetVolume() > cuttedBrep2[1].GetVolume())
+                        {
+                            currModel_Hollowed = cuttedBrep2[0];
+                            endEffector_Hollowed = cuttedBrep2[1];
+                        }
+                        else
+                        {
+                            currModel_Hollowed = cuttedBrep2[1];
+                            endEffector_Hollowed = cuttedBrep2[0];
+                        }
+                    }
+                    else
+                    {
+                        if (cuttedBrep2[0].GetVolume() > cuttedBrep2[0].GetVolume())
+                        {
+                            currModel_Hollowed = cuttedBrep2[1];
+                            endEffector_Hollowed = cuttedBrep2[0];
+                        }
+                        else
+                        {
+                            currModel_Hollowed = cuttedBrep2[0];
+                            endEffector_Hollowed = cuttedBrep2[1];
+                        }
+                    }
+                }
                 else
-                    myDoc.Objects.Add(cutter);
+                {
+                    RhinoApp.WriteLine("This rotational motion item cannot be created. Due to impatible to other items");
+                    return false;
+                }
+
             }
 
             myDoc.Objects.Delete(currModelObjId, true);
@@ -330,14 +386,14 @@ namespace DynaModel_v2.Final_Stage
             double distance = pointConnection1.DistanceTo(mainModel.ClosestPoint(pointConnection1)) + 1;
             Line endEffector_rail = new Line(pointConnection1, end_gear_dir, distance);
 
-            if (!cuttedBrep[0].IsManifold || !cuttedBrep[0].IsSolid)
+            if (!currModel.IsManifold || !currModel.IsSolid)
             {
                 RhinoApp.WriteLine("This rotational motion item cannot be created. Due to impatible to other items");
                 return false;
             }
 
 
-            if (!cuttedBrep[0].IsPointInside(endEffector_rail.To, myDoc.ModelAbsoluteTolerance, true)) // TODO: We need to make sure if the main model is closed and manifold. Perhaps write a function to fix the original model in the first place.
+            if (!currModel.IsPointInside(endEffector_rail.To, myDoc.ModelAbsoluteTolerance, true)) // TODO: We need to make sure if the main model is closed and manifold. Perhaps write a function to fix the original model in the first place.
             {
                 end_gear_dir.Reverse();
                 endEffector_rail = new Line(pointConnection1, end_gear_dir, distance);

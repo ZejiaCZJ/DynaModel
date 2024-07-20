@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj": {}
+    "B:\\SFU Study Materials\\CMPT415\\DynaModel\\DynaModel_v2.csproj": {}
   },
   "projects": {
-    "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj": {
+    "B:\\SFU Study Materials\\CMPT415\\DynaModel\\DynaModel_v2.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj",
+        "projectUniqueName": "B:\\SFU Study Materials\\CMPT415\\DynaModel\\DynaModel_v2.csproj",
         "projectName": "DynaModel_v2",
-        "projectPath": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\DynaModel_v2.csproj",
+        "projectPath": "B:\\SFU Study Materials\\CMPT415\\DynaModel\\DynaModel_v2.csproj",
         "packagesPath": "C:\\Users\\Zejia Cai\\.nuget\\packages\\",
-        "outputPath": "B:\\SFU Study Materials\\CMPT415\\DynaModel_v2\\obj\\",
+        "outputPath": "B:\\SFU Study Materials\\CMPT415\\DynaModel\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Zejia Cai\\AppData\\Roaming\\NuGet\\NuGet.Config",

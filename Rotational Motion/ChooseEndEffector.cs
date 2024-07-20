@@ -364,7 +364,7 @@ namespace DynaModel_v2.Rotational_Motion
                     double distance = pointConnection1.DistanceTo(mainModel.ClosestPoint(pointConnection1)) + 1;
                     Line endEffector_rail = new Line(pointConnection1, end_gear_dir, distance);
 
-                    if (!cuttedBrep[0].IsManifold || !cuttedBrep[0].IsSolid)
+                    if (!mainModel.IsManifold || !mainModel.IsSolid)
                     {
                         RhinoApp.WriteLine("Your model cannot be fixed to become manifold and closed, please try to fix it manually");
                         DA.SetData(0, false);
@@ -372,7 +372,7 @@ namespace DynaModel_v2.Rotational_Motion
                     }
 
 
-                    if (!cuttedBrep[0].IsPointInside(endEffector_rail.To, myDoc.ModelAbsoluteTolerance, true)) // TODO: We need to make sure if the main model is closed and manifold. Perhaps write a function to fix the original model in the first place.
+                    if (!mainModel.IsPointInside(endEffector_rail.To, myDoc.ModelAbsoluteTolerance, true)) // TODO: We need to make sure if the main model is closed and manifold. Perhaps write a function to fix the original model in the first place.
                     {
                         end_gear_dir.Reverse();
                         endEffector_rail = new Line(pointConnection1, end_gear_dir, distance);
