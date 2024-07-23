@@ -57,12 +57,12 @@ namespace DynaModel_v2.Final_Stage
         private static double thickness = 5;
         private static double ratio;
         private static double clearance = 0.5;
-        private static double clearance_shaft_radius = 2.4;
-        private static double shaft_radius = 2;
+        private static double clearance_shaft_radius = 3.4;
+        private static double shaft_radius = 3;
         private static double shaft_extends_from_gear = 3;
-        private static double gasket_inner_radius = 2.4; //shaft_radius + 0.4
-        private static double gasket_outer_radius = 5;
-        private static double gasket_clearance_inner_radius = 2.3;
+        private static double gasket_inner_radius = 3.4; //shaft_radius + 0.4
+        private static double gasket_outer_radius = 7;
+        private static double gasket_clearance_inner_radius = 3.3;
         private static double gasket_clearance_outer_radius = clearance_shaft_radius;
         private static double clearance_gasket_radius = 1.7;
         private static double gasket_gear_gap = 0.6;
@@ -427,7 +427,7 @@ namespace DynaModel_v2.Final_Stage
 
             Point3d end_gear_centerPoint = endEffector_rail.To;
             Vector3d end_gear_xDir = new Vector3d(0, 0, 0);
-            int end_gear_teethNum = 10;
+            int end_gear_teethNum = 15;
             double end_gear_selfRotAngle = 0;
             BevelGear end_gear = new BevelGear(end_gear_centerPoint, end_gear_Direction, end_gear_xDir, end_gear_teethNum, module, pressure_angle, thickness, end_gear_selfRotAngle, end_gear_coneAngle, false);
             #endregion
@@ -447,7 +447,7 @@ namespace DynaModel_v2.Final_Stage
             rail3.Transform(transform);
 
             //Find the center point of the gear
-            int first_driven_gear_teethNum = 10;
+            int first_driven_gear_teethNum = 15;
             double first_driven_gear_pitchRadius = getPitchRadius(first_driven_gear_teethNum) + clearance;
 
             Line rail5 = new Line(rail1.To, new Vector3d(rail2.Direction.X, rail2.Direction.Y, 0), first_driven_gear_pitchRadius);
@@ -509,7 +509,7 @@ namespace DynaModel_v2.Final_Stage
             int second_driven_gear_teethNum = getNumTeeth(second_driven_gear_tipRadius);
 
             SpurGear second_driven_gear = null;
-            if (second_driven_gear_tipRadius > getTipRadius(4))
+            if (second_driven_gear_tipRadius > getTipRadius(8))
             {
                 Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
                 start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + second_driven_gear_tipRadius);
@@ -717,7 +717,7 @@ namespace DynaModel_v2.Final_Stage
 
                 //Adjust second driven gear if needed
                 second_driven_gear_tipRadius = (connector_gear.CenterPoint.DistanceTo(start_gear_centerPoint) - start_gear.BaseRadius - connector_gear.BaseRadius) / 2;
-                if (second_driven_gear_tipRadius > getTipRadius(5))
+                if (second_driven_gear_tipRadius > getTipRadius(8))
                 {
                     second_driven_gear_teethNum = getNumTeeth(second_driven_gear_tipRadius);
                     Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
@@ -780,9 +780,10 @@ namespace DynaModel_v2.Final_Stage
 
 
                     end_gear_bottom_gakset_rail = new Line(bottomPoint, dir, bottom_gasket_gear_height - gasket_gear_gap);
+                    end_gear_bottom_gakset_rail.Extend(2, -2);
                     dir.Reverse();
                     end_gear_top_gasket_rail = new Line(topPoint, dir, top_gasket_gear_height - gasket_gear_gap);
-                    end_gear_top_gasket_rail.Extend(2, -2);
+                    
 
                     if (isReversed)
                     {
@@ -883,7 +884,7 @@ namespace DynaModel_v2.Final_Stage
             Line line1 = new Line(pt1, pt2);
             Brep brep = Brep.CreatePipe(line1.ToNurbsCurve(), gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
             Brep[] breps = Brep.CreateBooleanDifference(new[] { bestGearSet.EndGearBottomGasket }, new[] { brep, bestGearSet.ShaftClearance }, myDoc.ModelAbsoluteTolerance);
-            if (breps != null)
+            if (breps != null && breps.Length > 0)
             {
                 bestGearSet.EndGearBottomGasket = breps[0];
                 foreach (var temp_brep in breps)
@@ -899,7 +900,7 @@ namespace DynaModel_v2.Final_Stage
             line1 = new Line(pt1, pt2);
             brep = Brep.CreatePipe(line1.ToNurbsCurve(), gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
             breps = Brep.CreateBooleanDifference(new[] { bestGearSet.FirstDrivenGearTopGasket }, new[] { brep, bestGearSet.EndGearShaftClearance }, myDoc.ModelAbsoluteTolerance);
-            if (breps != null)
+            if (breps != null && breps.Length > 0)
             {
                 bestGearSet.FirstDrivenGearTopGasket = breps[0];
                 foreach (var temp_brep in breps)
@@ -910,7 +911,7 @@ namespace DynaModel_v2.Final_Stage
             }
 
             breps = Brep.CreateBooleanDifference(new[] { bestGearSet.Shaft }, new[] { bestGearSet.EndGearShaftClearance }, myDoc.ModelAbsoluteTolerance);
-            if (breps != null)
+            if (breps != null && breps.Length > 0)
             {
                 bestGearSet.Shaft = breps[0];
                 foreach (var temp_brep in breps)
@@ -1035,6 +1036,7 @@ namespace DynaModel_v2.Final_Stage
             {
                 Curve cover_rail = (new Line(intersectionPoints[0], end_gear_dir, bestGearSet.EndGearShaftRail.GetLength() / 5)).ToNurbsCurve();
                 Brep cover = Brep.CreateThickPipe(cover_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                
                 Guid guid = myDoc.Objects.Add(cover);
                 gaskets_guid.Add(guid);
                 Circle hole = new Circle(new Plane(cover_rail.PointAtLength(cover_rail.GetLength() / 2), cover_rail.TangentAtStart), (gasket_outer_radius+gasket_inner_radius)/2);

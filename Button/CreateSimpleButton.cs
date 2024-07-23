@@ -19,7 +19,12 @@ namespace DynaModel_v2.Button
         private Guid currModelObjId;
         private RhinoDoc myDoc;
         private List<Point3d> surfacePts;
-
+        private Brep conductive_part;
+        private Guid conductive_part_guid;
+        private Brep spring_part;
+        private Guid spring_part_guid;
+        private Curve spring_part_circle;
+        private static List<Brep> button_parts;
 
         /// <summary>
         /// Initializes a new instance of the CreateSimpleButton class.
@@ -33,6 +38,45 @@ namespace DynaModel_v2.Button
             currModelObjId = Guid.Empty;
             myDoc = RhinoDoc.ActiveDoc;
             surfacePts = new List<Point3d>();
+
+            string filePath = "./Button.3dm";
+            string absolutePath = Path.GetFullPath(filePath);
+
+            if (!File.Exists(absolutePath))
+            {
+                RhinoApp.WriteLine("The file does not exist: " + absolutePath);
+                return;
+            }
+
+            File3dm file = File3dm.Read(absolutePath);
+            if (file == null)
+            {
+                RhinoApp.WriteLine("No current support for button feature");
+                return;
+            }
+
+            button_parts = new List<Brep>();
+            foreach (var obj in file.Objects)
+            {
+                if(obj.Geometry.ObjectType == ObjectType.Brep)
+                    button_parts.Add(obj.Geometry as Brep);
+                else if(obj.Geometry.ObjectType == ObjectType.Curve)
+                    spring_part_circle = obj.Geometry as Curve;
+            }
+            if (button_parts[0].GetVolume() > button_parts[1].GetVolume())
+            {
+                conductive_part = button_parts[1].Duplicate() as Brep;
+                spring_part = button_parts[0].Duplicate() as Brep;
+                //conductive_part_guid = myDoc.Objects.Add(conductive_part);
+                //spring_part_guid = myDoc.Objects.Add(spring_part);
+            }
+            else
+            {
+                conductive_part = button_parts[0].Duplicate() as Brep;
+                spring_part = button_parts[1].Duplicate() as Brep;
+                //conductive_part_guid = myDoc.Objects.Add(conductive_part);
+                //spring_part_guid = myDoc.Objects.Add(spring_part);
+            }
         }
 
         /// <summary>
@@ -162,24 +206,55 @@ namespace DynaModel_v2.Button
                             myDoc.Objects.Delete(ptsID, true);
                         }
 
-                        string filePath = "./Orthoplanar_Spring.3dm";
-                        string absolutePath = Path.GetFullPath(filePath);
 
-                        if (!File.Exists(absolutePath))
-                        {
-                            RhinoApp.WriteLine("The file does not exist: " + absolutePath);
-                            return;
-                        }
+                        //Create a line between the base center of the model and the selected pt
+                        Circle circle = new Circle(new Point3d(0, 0, currModel.GetBoundingBox(true).Min.Z + 0.1), 1000);
+                        Brep planarSurface = Brep.CreatePlanarBreps(new[] { circle.ToNurbsCurve() }, myDoc.ModelAbsoluteTolerance)[0];
+                        Brep[] a = planarSurface.Trim(currModel, myDoc.ModelAbsoluteTolerance);
+                        Brep currModel_bottom = new Brep();
+                        if (a.Length > 0)
+                            currModel_bottom = a[0];
+                        Point3d centroid = AreaMassProperties.Compute(currModel_bottom.Faces[0]).Centroid;
 
-                        File3dm file = File3dm.Read(absolutePath);
-                        if (file == null)
+                        //Create a button on the surface of the Model
+                        bool success = currModel.ClosestPoint(tempPt, out Point3d closestPoint, out ComponentIndex ci, out double s, out double t, 0.1, out Vector3d normal);
+                        if (success)
                         {
-                            RhinoApp.WriteLine("No current support for button feature");
-                            return;
-                        }
-                        foreach (var obj in file.Objects)
-                        {
-                            myDoc.Objects.Add(obj.Geometry, obj.Attributes);
+                            Brep union = Brep.CreateBooleanUnion(new[] { conductive_part, spring_part }, myDoc.ModelAbsoluteTolerance)[0];
+
+                            Transform rotation = Transform.Rotation(new Vector3d(0, 0, 1), normal, union.GetBoundingBox(true).Center);
+                            conductive_part.Transform(rotation);
+                            spring_part.Transform(rotation);
+                            spring_part_circle.Transform(rotation);
+                            union.Transform(rotation);
+
+                            Vector3d translationVector = tempPt - union.GetBoundingBox(true).Center;
+                            Transform translation = Transform.Translation(translationVector);
+                            conductive_part.Transform(translation);
+
+                            //translationVector = tempPt - spring_part.GetBoundingBox(true).Center;
+                            translation = Transform.Translation(translationVector);
+                            spring_part.Transform(translation);
+                            spring_part_circle.Transform(translation);
+                            union.Transform(translation);
+
+                            Extrusion pipe = Extrusion.Create(spring_part_circle, 2, true);
+
+                            myDoc.Objects.Add(union);
+                            conductive_part_guid = myDoc.Objects.Add(conductive_part);
+                            spring_part_guid = myDoc.Objects.Add(spring_part);
+                            Brep[] differences = Brep.CreateBooleanDifference(currModel, pipe.ToBrep(), myDoc.ModelAbsoluteTolerance);
+
+                            if(differences != null && differences.Length > 0)
+                            {
+                                currModel = differences[0];
+                                myDoc.Objects.Delete(currModelObjId, true);
+                                currModelObjId = myDoc.Objects.Add(currModel);
+                            }
+                            else
+                            {
+                                myDoc.Objects.Add(pipe);
+                            }
                         }
                     }
                 }

@@ -408,7 +408,7 @@ namespace DynaModel_v2.Rotational_Motion
 
                     Point3d end_gear_centerPoint = endEffector_rail.To;
                     Vector3d end_gear_xDir = new Vector3d(0, 0, 0);
-                    int end_gear_teethNum = 10;
+                    int end_gear_teethNum = 15;
                     double end_gear_selfRotAngle = 0;
                     BevelGear end_gear = new BevelGear(end_gear_centerPoint, end_gear_Direction, end_gear_xDir, end_gear_teethNum, module, pressure_angle, thickness, end_gear_selfRotAngle, end_gear_coneAngle, false);
                     #endregion
@@ -428,7 +428,7 @@ namespace DynaModel_v2.Rotational_Motion
                     rail3.Transform(transform);
 
                     //Find the center point of the gear
-                    int first_driven_gear_teethNum = 10;
+                    int first_driven_gear_teethNum = 15;
                     double first_driven_gear_pitchRadius = getPitchRadius(first_driven_gear_teethNum) + clearance;
 
                     Line rail5 = new Line(rail1.To, new Vector3d(rail2.Direction.X, rail2.Direction.Y, 0), first_driven_gear_pitchRadius);
@@ -490,7 +490,7 @@ namespace DynaModel_v2.Rotational_Motion
                     int second_driven_gear_teethNum = getNumTeeth(second_driven_gear_tipRadius);
 
                     SpurGear second_driven_gear = null;
-                    if (second_driven_gear_tipRadius > getTipRadius(4))
+                    if (second_driven_gear_tipRadius > getTipRadius(8))
                     {
                         Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
                         start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + second_driven_gear_tipRadius);
