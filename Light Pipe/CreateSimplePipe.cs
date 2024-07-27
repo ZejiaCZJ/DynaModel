@@ -170,6 +170,7 @@ namespace DynaModel_v2.Light_Pipe
             if (!DA.GetData(2, ref outputType))
                 return;
 
+            Item saveItem = new Item();
             if (startButtonClicked && outputType.Equals("LED Light"))
             {
                 var rc = RhinoGet.GetOneObject("Select a model (geometry): ", false, ObjectType.AnyObject, out ObjRef currObjRef);
@@ -470,6 +471,7 @@ namespace DynaModel_v2.Light_Pipe
                                     myDoc.Objects.Delete(conductivePipeGuid, true);
                                     return;
                                 }
+                                saveItem.customized_part_patch = patch;
                                 ignorePipes.Add(lightGuidPipe);
                             }
                         }
@@ -484,7 +486,6 @@ namespace DynaModel_v2.Light_Pipe
                         
                     }
                     //Pass the result as Item to the Save button
-                    Item saveItem = new Item();
                     saveItem.StartPoint = pipeExit;
                     //saveItem.EndPoint = customized_part_center;
                     foreach (Brep brep in customized_partBreps)

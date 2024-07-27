@@ -71,6 +71,11 @@ namespace DynaModel_v2.Final_Stage
                         Item item = SavedItems.items[i];
                         generateHelper.GenerateAirPipe(ref item, out List<Brep> subtrahends);
                     }
+                    if (SavedItems.items[i].Name == "Button")
+                    {
+                        Item item = SavedItems.items[i];
+                        generateHelper.GenerateButtonPipe(ref item, out List<Brep> subtrahends);
+                    }
                 }
                 //RhinoDoc.ActiveDoc.Objects.Add(generateHelper.foundation);
 
@@ -164,6 +169,8 @@ namespace DynaModel_v2.Final_Stage
                 {
                     RhinoDoc.ActiveDoc.Objects.Add(item);
                 }
+                myDoc.Objects.Delete(generateHelper.currModel_Hollowed_ObjId, true);
+                generateHelper.currModel_Hollowed_ObjId = myDoc.Objects.Add(generateHelper.currModel_Hollowed);
             }
 
             

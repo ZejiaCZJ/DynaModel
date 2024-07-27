@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using DynaModel_v2.SharedData;
 using Grasshopper.Kernel;
 using Rhino;
 using Rhino.Collections;
@@ -113,6 +115,12 @@ namespace DynaModel_v2.Button
                     currModelObjId = currObjRef.ObjectId;
                     currModel = currObjRef.Brep();
 
+                    myDoc.Objects.Hide(currModelObjId, true);
+                    //currModelObjId = myDoc.Objects.Add(currModel);
+
+                    Brep currModel_hollowed = myDoc.Objects.Find(SavedItems.originalModelGuids[1]).Geometry as Brep;
+                    Guid currModel_hollowed_guid = myDoc.Objects.Add(currModel_hollowed);
+
                     #region Convert the current object to Brep if needed
                     if (currObjRef.Geometry().ObjectType == ObjectType.Mesh)
                     {
@@ -142,7 +150,7 @@ namespace DynaModel_v2.Button
                     #endregion
 
                     #region Display points for user to choose
-                    BoundingBox boundingBox = currModel.GetBoundingBox(true);
+                    BoundingBox boundingBox = currModel_hollowed.GetBoundingBox(true);
 
                     double w = boundingBox.Max.X - boundingBox.Min.X;
                     double l = boundingBox.Max.Y - boundingBox.Min.Y;
@@ -159,14 +167,21 @@ namespace DynaModel_v2.Button
                         Plane plane = new Plane(Origin, xPoint, yPoint);
                         PlaneSurface planeSurface = PlaneSurface.CreateThroughBox(plane, boundingBox);
 
-                        Intersection.BrepSurface(currModel, planeSurface, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints);
+                        Intersection.BrepSurface(currModel_hollowed, planeSurface, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints);
 
                         //Create Points on the Curve
                         if (intersectionCurves != null)
                         {
                             if (intersectionCurves.Length != 0)
                             {
-                                foreach (Curve curve in intersectionCurves)
+                                Line line = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 1));
+                                Curve curve = line.ToNurbsCurve();
+                                foreach (Curve c in intersectionCurves)
+                                {
+                                    if(c.GetLength() > curve.GetLength())
+                                        curve = c;
+                                }
+                                if(!curve.Equals(line.ToNurbsCurve()))
                                 {
                                     Double[] curveParams = curve.DivideByLength(2, true, out Point3d[] points);
                                     if (curveParams != null && curveParams.Length > 0)
@@ -175,9 +190,6 @@ namespace DynaModel_v2.Button
                             }
                         }
                     }
-
-                    myDoc.Objects.Hide(currModelObjId, true);
-                    currModelObjId = myDoc.Objects.Add(currModel);
 
                     // Put dots on the view
                     List<Guid> pts_Guid = new List<Guid>();
@@ -217,9 +229,10 @@ namespace DynaModel_v2.Button
                         Point3d centroid = AreaMassProperties.Compute(currModel_bottom.Faces[0]).Centroid;
 
                         //Create a button on the surface of the Model
-                        bool success = currModel.ClosestPoint(tempPt, out Point3d closestPoint, out ComponentIndex ci, out double s, out double t, 0.1, out Vector3d normal);
+                        bool success = currModel_hollowed.ClosestPoint(tempPt, out Point3d closestPoint, out ComponentIndex ci, out double s, out double t, 0.1, out Vector3d normal);
                         if (success)
                         {
+                            //Fit the button onto the model
                             Brep union = Brep.CreateBooleanUnion(new[] { conductive_part, spring_part }, myDoc.ModelAbsoluteTolerance)[0];
 
                             Transform rotation = Transform.Rotation(new Vector3d(0, 0, 1), normal, union.GetBoundingBox(true).Center);
@@ -232,29 +245,78 @@ namespace DynaModel_v2.Button
                             Transform translation = Transform.Translation(translationVector);
                             conductive_part.Transform(translation);
 
-                            //translationVector = tempPt - spring_part.GetBoundingBox(true).Center;
                             translation = Transform.Translation(translationVector);
                             spring_part.Transform(translation);
                             spring_part_circle.Transform(translation);
                             union.Transform(translation);
 
-                            Extrusion pipe = Extrusion.Create(spring_part_circle, 2, true);
+                            Extrusion pipe = Extrusion.Create(spring_part_circle, 5.5, true);
 
-                            myDoc.Objects.Add(union);
                             conductive_part_guid = myDoc.Objects.Add(conductive_part);
                             spring_part_guid = myDoc.Objects.Add(spring_part);
-                            Brep[] differences = Brep.CreateBooleanDifference(currModel, pipe.ToBrep(), myDoc.ModelAbsoluteTolerance);
+                            Brep[] differences = Brep.CreateBooleanDifference(currModel_hollowed, pipe.ToBrep(), myDoc.ModelAbsoluteTolerance);
 
-                            if(differences != null && differences.Length > 0)
+                            //Show button on the model if possible
+                            if (differences != null && differences.Length > 0)
                             {
-                                currModel = differences[0];
-                                myDoc.Objects.Delete(currModelObjId, true);
-                                currModelObjId = myDoc.Objects.Add(currModel);
+                                currModel_hollowed = differences[0];
+                                myDoc.Objects.Delete(currModel_hollowed_guid, true);
+                                currModel_hollowed_guid = myDoc.Objects.Add(currModel_hollowed);
                             }
                             else
                             {
-                                myDoc.Objects.Add(pipe);
+                                RhinoApp.WriteLine("Fail to create a button on the selected area");
+                                var allObjects = new List<RhinoObject>(RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject));
+                                foreach (var singleObject in allObjects)
+                                    if (SavedItems.originalModelGuids.All(guid => guid != singleObject.Id))
+                                        RhinoDoc.ActiveDoc.Objects.Delete(singleObject.Id, true);
+                                foreach (var singleObject in SavedItems.originalModelGuids)
+                                    RhinoDoc.ActiveDoc.Objects.Show(singleObject, true);
+                                return;
                             }
+
+                            //Create a straight route from the base center to the selected point
+                            Curve route = new Line(centroid, tempPt).ToNurbsCurve();
+                            route = route.Trim(CurveEnd.Both, route.GetLength() / 12);
+                            Brep conductive_pipe = Brep.CreatePipe(route, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                            Curve conductive_source_circle = new Circle(new Plane(centroid, new Vector3d(0, 0, 1)), 3).ToNurbsCurve();
+                            Curve pipe_start_circle = new Circle(new Plane(route.PointAtStart, route.TangentAtStart), 3).ToNurbsCurve();
+
+                            if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
+                                pipe_start_circle.Reverse();
+                            Point3d start = conductive_source_circle.PointAtStart;
+                            pipe_start_circle.ClosestPoint(start, out t);
+                            pipe_start_circle.ChangeClosedCurveSeam(t);
+                            Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
+                            Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                            Brep source_extension = loftBreps[0];
+
+                            Curve pipe_end_circle = new Circle(new Plane(route.PointAtEnd, route.TangentAtEnd), 3).ToNurbsCurve();
+                            if (!Curve.DoDirectionsMatch(spring_part_circle, pipe_end_circle))
+                                pipe_start_circle.Reverse();
+                            start = spring_part_circle.PointAtStart;
+                            pipe_end_circle.ClosestPoint(start, out t);
+                            pipe_end_circle.ChangeClosedCurveSeam(t);
+                            crossSectionCurves = new Curve[] { spring_part_circle, pipe_end_circle };
+                            loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                            Brep spring_extension = loftBreps[0];
+
+                            source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                            spring_extension = spring_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                            myDoc.Objects.Add(conductive_pipe);
+                            myDoc.Objects.Add(source_extension);
+                            myDoc.Objects.Add(spring_extension);
+
+                            Item savedItem = new Item();
+                            savedItem.Name = "Button";
+                            savedItem.EndPoint = tempPt;
+                            savedItem.ButtonSet = new List<Brep>();
+                            savedItem.ButtonSet.Add(conductive_part);
+                            savedItem.ButtonSet.Add(spring_part);
+                            savedItem.Button_Spring_Circle = spring_part_circle;
+
+                            DA.SetData(0, savedItem);
                         }
                     }
                 }

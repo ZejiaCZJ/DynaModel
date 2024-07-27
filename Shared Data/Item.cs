@@ -18,9 +18,15 @@ namespace DynaModel_v2.SharedData
 
         public Point3d StartPoint { get; set; }
 
+        public Brep customized_part_patch { get; set; }
+
         public List<Brep> EndPointModel { get; set; }
 
         public Essentials gearEssentials { get; set; }
+
+        public List<Brep> ButtonSet { get; set; }
+
+        public Curve Button_Spring_Circle { get; set; }
 
         public Item()
         {
