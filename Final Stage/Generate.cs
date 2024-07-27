@@ -54,6 +54,10 @@ namespace DynaModel_v2.Final_Stage
             if(generate)
             {
                 GenerateHelper generateHelper = new GenerateHelper(out bool success);
+
+                //Sort the saved items
+                Sort(ref SavedItems.items);
+
                 for (int i = 0; i < SavedItems.items.Count; i++)
                 {
                     if (SavedItems.items[i].Name == "Rotational Motion")
@@ -172,9 +176,32 @@ namespace DynaModel_v2.Final_Stage
                 myDoc.Objects.Delete(generateHelper.currModel_Hollowed_ObjId, true);
                 generateHelper.currModel_Hollowed_ObjId = myDoc.Objects.Add(generateHelper.currModel_Hollowed);
             }
+        }
 
-            
-        
+        private void Sort(ref List<Item> items)
+        {
+            List<Item> new_SavedItem  = new List<Item>();
+            foreach (var item in items)
+            {
+                if(item.Name == "Rotational Motion")
+                    new_SavedItem.Add(item);
+            }
+            foreach (var item in items)
+            {
+                if (item.Name == "LED Light")
+                    new_SavedItem.Add(item);
+            }
+            foreach (var item in items)
+            {
+                if (item.Name == "Air Pipe")
+                    new_SavedItem.Add(item);
+            }
+            foreach (var item in items)
+            {
+                if (item.Name == "Button")
+                    new_SavedItem.Add(item);
+            }
+            items = new_SavedItem;
         }
 
         /// <summary>
