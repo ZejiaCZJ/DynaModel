@@ -18,7 +18,7 @@ namespace DynaModel_v2.SharedData
 
         public Point3d StartPoint { get; set; }
 
-        public Brep customized_part_patch { get; set; }
+        public List<Brep> customized_part_patch { get; set; }
 
         public List<Brep> EndPointModel { get; set; }
 

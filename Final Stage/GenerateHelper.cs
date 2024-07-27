@@ -1185,7 +1185,7 @@ namespace DynaModel_v2.Final_Stage
 
             
             List<Brep> customized_partBreps = savedItem.EndPointModel;
-
+            int count = 0;
             
             PipeExit pipeExit = new PipeExit();
             foreach (Brep customized_part in customized_partBreps)
@@ -1266,13 +1266,9 @@ namespace DynaModel_v2.Final_Stage
 
                 #region Create Pipes
                 //Cut the first 5mm of the bestRoute to generate the inner pipe
-                //Double[] divisionParameters = bestRoute.DivideByLength(5, true, out Point3d[] points);
                 Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.End, 7);
 
                 soluablePipeRoute = soluablePipeRoute.Trim(CurveEnd.Start, soluablePipeRoute.GetLength() / 10);
-
-                //soluablePipeRoute = soluablePipeRoute.Extend(CurveEnd.Start, CurveExtensionStyle.Smooth, pipeExit.actualLocation);
-                //soluablePipeRoute.Trim(CurveEnd.Start, soluablePipeRoute.GetLength() / 12);
 
                 Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                 Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 3, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
@@ -1300,13 +1296,36 @@ namespace DynaModel_v2.Final_Stage
                         Brep soluableExtension = loftBreps[0];
                         soluableExtension = soluableExtension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                        //soluablePipe[0] = Brep.CreateBooleanUnion(new[] { soluableExtension, soluablePipe[0] }, myDoc.ModelAbsoluteTolerance)[0];
-                        specialPipes.Add(myDoc.Objects.Add(soluableExtension));
+                        start = soluablePipeRoute.PointAtStart;
+                        Vector3d temp_tangent = soluablePipeRoute.TangentAtStart;
+                        temp_tangent.Unitize();
+                        start = start + temp_tangent;
+                        pipeStartEdge = new Circle(new Plane(start, tangent), start, 3);
+                        actual_pipeStartCircle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3);
+                        curve1 = actual_pipeStartCircle.ToNurbsCurve();
+                        curve2 = pipeStartEdge.ToNurbsCurve();
+
+                        if (curve1.IsClosed && curve2.IsClosed)
+                        {
+                            if (!Curve.DoDirectionsMatch(curve1, curve2))
+                                curve2.Reverse();
+                            start = curve1.PointAtStart;
+                            curve2.ClosestPoint(start, out t);
+                            curve2.ChangeClosedCurveSeam(t);
+                            crossSectionCurves = new Curve[] { curve1, curve2 };
+                            loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                            Brep soluableExtension_Cutter = loftBreps[0];
+                            soluableExtension_Cutter = soluableExtension_Cutter.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                            Brep[] soluableExtensions = Brep.CreateBooleanDifference(soluableExtension_Cutter, soluableExtension, myDoc.ModelAbsoluteTolerance);
+                            soluableExtension = soluableExtensions[0];
+                        }
+
+                        Guid a = myDoc.Objects.Add(soluableExtension);
+                        specialPipes.Add(a);
+                        ignorePipesGuid.Add(a);
                     }
                 }
 
-                //soluablePipe = Brep.CreateBooleanSplit(soluablePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
-                //conductivePipe = Brep.CreateBooleanSplit(conductivePipe[0], currModel, myDoc.ModelAbsoluteTolerance);
                 Guid conductivePipeGuid = myDoc.Objects.Add(conductivePipe[0], redAttribute);
                 specialPipes.Add(conductivePipeGuid);
                 InViewObject conductiveObject = new InViewObject(conductivePipe[0], conductivePipeGuid, "conductive pipe");
@@ -1343,7 +1362,7 @@ namespace DynaModel_v2.Final_Stage
                         //Get the patch for the pipe
                         if(!lightGuidPipe.IsSolid)
                         {
-                            lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, savedItem.customized_part_patch }, myDoc.ModelAbsoluteTolerance);
+                            lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, savedItem.customized_part_patch[count] }, myDoc.ModelAbsoluteTolerance);
                         }
 
                         
@@ -1356,25 +1375,22 @@ namespace DynaModel_v2.Final_Stage
                             return false;
                         }
                         specialPipes.Add(a);
-                        ignorePipes.Add(lightGuidPipe);
-
+                        ignorePipesGuid.Add(a);
+                        count++;
                     }
                 }
 
 
-                ignorePipes.Add(soluablePipe[0]);
+                //ignorePipes.Add(soluablePipe[0]);
 
-                Guid g = myDoc.Objects.Add(soluablePipe[0], soluableAttribute);
-                ignorePipesGuid.Add(g); //soluablePipe[1] if used CreateBooleanSplit
-                specialPipes.Add(g); 
+                //Guid g = myDoc.Objects.Add(soluablePipe[0], soluableAttribute);
+                //ignorePipesGuid.Add(g); //soluablePipe[1] if used CreateBooleanSplit
+                //specialPipes.Add(g); 
                 #endregion
             }
 
-            foreach(var pipe in ignorePipesGuid)
-            {
-                myDoc.Objects.Delete(pipe, true);
-            }
-
+            ignorePipesGuid.Clear();
+            myDoc.Objects.Hide(currModelObjId, true);
             myDoc.Views.Redraw();
 
             return true;
