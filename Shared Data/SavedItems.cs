@@ -154,18 +154,28 @@ namespace DynaModel_v2.SharedData
 
             if (items.Count > 0)
             {
-                if(items.Count != itemsCount)
+                if(items.Count > itemsCount)
                 {
                     for (int i = itemsCount; i < items.Count; i++)
                     {
                         itemsNames.Add(items[i].Name);
                     }
                     itemsCount = items.Count;
+                    DA.SetDataList(0, itemsNames);
                 }
-
+                else if (items.Count < itemsCount)
+                {
+                    itemsNames.Clear();
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        itemsNames.Add(items[i].Name);
+                    }
+                    itemsCount = items.Count;
+                    DA.SetDataList(0, itemsNames);
+                }
                 //TODO: Sort both the item and itemNames lists, based on the item type
 
-                DA.SetDataList(0, itemsNames);
+
             }
         }
 

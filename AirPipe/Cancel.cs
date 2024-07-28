@@ -53,8 +53,7 @@ namespace DynaModel_v2.AirPipe
                 foreach (var singleObject in allObjects)
                     if (SavedItems.originalModelGuids.All(guid => guid != singleObject.Id))
                         RhinoDoc.ActiveDoc.Objects.Delete(singleObject.Id, true);
-                foreach (var singleObject in SavedItems.originalModelGuids)
-                    RhinoDoc.ActiveDoc.Objects.Show(singleObject, true);
+                RhinoDoc.ActiveDoc.Objects.Show(SavedItems.originalModelGuids[0], true);
             }
         }
 
