@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using DynaModel_v2.SharedData;
 using Grasshopper.Kernel;
 using Rhino;
@@ -56,6 +57,15 @@ namespace DynaModel_v2.Final_Stage
                 GenerateHelper generateHelper = new GenerateHelper(out bool success);
 
                 //Sort the saved items
+                foreach(var item in SavedItems.items)
+                {
+                    string pattern = @"^\d+\. ";
+
+                    // Replace the matched pattern with an empty string
+                    string result = Regex.Replace(item.Name, pattern, string.Empty);
+
+                    item.Name = result;
+                }
                 Sort(ref SavedItems.items);
 
                 for (int i = 0; i < SavedItems.items.Count; i++)

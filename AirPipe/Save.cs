@@ -55,7 +55,10 @@ namespace DynaModel_v2.AirPipe
             if (save)
             {
                 if (essentials.Name != string.Empty)
+                {
+                    essentials.Name = $"{SavedItems.items.Count + 1}. {essentials.Name}";
                     SavedItems.items.Add(essentials);
+                }
                 //Return the Rhino view to its original look
                 var allObjects = new List<RhinoObject>(RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject));
                 foreach (var singleObject in allObjects)

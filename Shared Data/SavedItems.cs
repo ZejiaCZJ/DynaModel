@@ -146,6 +146,7 @@ namespace DynaModel_v2.SharedData
         {
             if (items.Count == 0)
             {
+                itemsNames = new List<String>();
                 DA.SetDataList(0, itemsNames);
             }
 
@@ -153,7 +154,7 @@ namespace DynaModel_v2.SharedData
 
             if (items.Count > 0)
             {
-                if(items.Count > itemsCount)
+                if(items.Count != itemsCount)
                 {
                     for (int i = itemsCount; i < items.Count; i++)
                     {
