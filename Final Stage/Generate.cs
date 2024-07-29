@@ -90,6 +90,11 @@ namespace DynaModel_v2.Final_Stage
                         Item item = SavedItems.items[i];
                         generateHelper.GenerateButtonPipe(ref item, out List<Brep> subtrahends);
                     }
+                    if (SavedItems.items[i].Name == "Touch")
+                    {
+                        Item item = SavedItems.items[i];
+                        generateHelper.GenerateTouchPipe(ref item, out List<Brep> subtrahends);
+                    }
                 }
                 //RhinoDoc.ActiveDoc.Objects.Add(generateHelper.foundation);
 
@@ -209,6 +214,11 @@ namespace DynaModel_v2.Final_Stage
             foreach (var item in items)
             {
                 if (item.Name == "Button")
+                    new_SavedItem.Add(item);
+            }
+            foreach (var item in items)
+            {
+                if (item.Name == "Touch")
                     new_SavedItem.Add(item);
             }
             items = new_SavedItem;

@@ -17,6 +17,8 @@ using Priority_Queue;
 using System.Drawing;
 using Rhino.Commands;
 using Grasshopper.Kernel.Geometry.Delaunay;
+using Grasshopper.Kernel.Geometry;
+using Plane = Rhino.Geometry.Plane;
 
 namespace DynaModel_v2.Final_Stage
 {
@@ -1399,6 +1401,102 @@ namespace DynaModel_v2.Final_Stage
         public bool GenerateSwipePipe(ref Item savedItem)
         {  
             return false;
+        }
+
+        public bool GenerateTouchPipe(ref Item savedItem, out List<Brep> subtrahends)
+        {
+            subtrahends = new List<Brep>();
+
+            Point3d end_point = savedItem.EndPoint;
+            Brep customized_part = savedItem.EndPointModel[0];
+            Intersection.BrepBrep(customized_part, currModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints);
+            Curve customized_part_curve = intersectionCurves[0];
+
+            voxelSpace = null;
+            GetVoxelSpace(currModel, 1, currModel);
+
+            //Find a available conductive source
+            PipeExit pipeExit = new PipeExit();
+            if (pipeExit.location == null)
+            {
+                if (conductivePipeExitPts.Count == 0)
+                {
+                    BoundingBox boundingBox = currModel.GetBoundingBox(true);
+                    GetConductivePipeExits(currModel);
+                }
+
+                bool allTaken = true;
+                foreach (var item in conductivePipeExitPts)
+                {
+                    if (item.isTaken == false && item.location.isTaken == false)
+                    {
+                        pipeExit = item;
+                        item.isTaken = true;
+                        allTaken = false;
+                        break;
+                    }
+                }
+                if (allTaken)
+                {
+                    RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore Touch parameters");
+                    return false;
+                }
+            }
+
+            List<Point3d> bestRoute1 = FindShortestPath(end_point, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 2);
+
+            Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
+            bestRoute = bestRoute.Trim(CurveEnd.Both, bestRoute.GetLength() / 12);
+            Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+            Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
+            Curve pipe_start_circle = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3).ToNurbsCurve();
+            if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
+                pipe_start_circle.Reverse();
+            Point3d start = conductive_source_circle.PointAtStart;
+            pipe_start_circle.ClosestPoint(start, out double t);
+            pipe_start_circle.ChangeClosedCurveSeam(t);
+            Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
+            Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+            Brep source_extension = loftBreps[0];
+            source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            Curve pipe_end_circle = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3).ToNurbsCurve();
+            if (!Curve.DoDirectionsMatch(customized_part_curve, pipe_end_circle))
+                pipe_start_circle.Reverse();
+            start = customized_part_curve.PointAtStart;
+            pipe_end_circle.ClosestPoint(start, out t);
+            pipe_end_circle.ChangeClosedCurveSeam(t);
+            crossSectionCurves = new Curve[] { customized_part_curve, pipe_end_circle };
+            loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+            customized_part = loftBreps[0];
+            customized_part = customized_part.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+            Brep[] faces = currModel.Split(new[] { customized_part_curve }, myDoc.ModelAbsoluteTolerance);
+            Brep patch = new Brep();
+            if (faces.Length > 0)
+            {
+                patch = faces[0];
+                foreach (var face in faces)
+                {
+                    if (face.Faces.Count < patch.Faces.Count)
+                        patch = face;
+                }
+            }
+            Brep touch = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
+            
+            if(touch == null || touch.IsSolid)
+            {
+                touch = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
+            }
+
+            myDoc.Objects.Add(conductive_pipe);
+            myDoc.Objects.Add(source_extension);
+            myDoc.Objects.Add(touch);
+            myDoc.Objects.Hide(currModelObjId, true);
+
+
+            return true;
         }
 
         public bool GenerateButtonPipe(ref Item savedItem, out List<Brep> subtrahends)
