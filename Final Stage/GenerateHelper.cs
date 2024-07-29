@@ -1367,8 +1367,6 @@ namespace DynaModel_v2.Final_Stage
                             lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, savedItem.customized_part_patch[count] }, myDoc.ModelAbsoluteTolerance);
                         }
 
-                        
-
                         Guid a = myDoc.Objects.Add(lightGuidPipe, lightGuideAttribute);
                         if (a == Guid.Empty)
                         {
@@ -1376,6 +1374,7 @@ namespace DynaModel_v2.Final_Stage
                             myDoc.Objects.Delete(conductivePipeGuid, true);
                             return false;
                         }
+                        currModel_Hollowed = Brep.CreateBooleanDifference(currModel_Hollowed, lightGuidPipe, myDoc.ModelAbsoluteTolerance)[0];
                         specialPipes.Add(a);
                         ignorePipesGuid.Add(a);
                         count++;
@@ -1583,7 +1582,7 @@ namespace DynaModel_v2.Final_Stage
                 myDoc.Objects.Add(spring_part);
                 currModel_Hollowed = differences[0];
                 //myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
-                currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
+                //currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
             }
             else
             {
