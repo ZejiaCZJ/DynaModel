@@ -818,6 +818,12 @@ namespace DynaModel_v2.Final_Stage
 
 
             GearSet bestGearSet = workable_gearsets[0];
+            int difference = bestGearSet.ConnectorGear.NumTeeth;
+            if (bestGearSet.SecondDrivenGear != null)
+            {
+                difference = Math.Abs(bestGearSet.ConnectorGear.NumTeeth - bestGearSet.SecondDrivenGear.NumTeeth);
+            }
+
             foreach (var gearset in workable_gearsets)
             {
                 if (gearset.SecondDrivenGear == null)
@@ -829,6 +835,16 @@ namespace DynaModel_v2.Final_Stage
                 {
                     if (bestGearSet.SecondDrivenGear != null && gearset.SecondDrivenGear.NumTeeth < bestGearSet.SecondDrivenGear.NumTeeth)
                         bestGearSet = gearset;
+                    //if(bestGearSet.SecondDrivenGear != null)
+                    //{
+                    //    int temp_difference = Math.Abs(gearset.ConnectorGear.NumTeeth - gearset.SecondDrivenGear.NumTeeth);
+                    //    if(temp_difference < difference)
+                    //    {
+                    //        difference = temp_difference;
+                    //        bestGearSet = gearset;
+                    //    }
+
+                    //}
                 }
             }
 
@@ -1104,7 +1120,7 @@ namespace DynaModel_v2.Final_Stage
 
             #region Find pipe path
             //Method 1: use A* directly
-            List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
+            List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, "Air Pipe");
             Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
             myDoc.Objects.Add(bestRoute);
 
@@ -1232,7 +1248,7 @@ namespace DynaModel_v2.Final_Stage
                     }
                 }
 
-                List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), customized_part, currModel, 1);
+                List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), customized_part, currModel, "LED light");
 
                 #region Get the line that combine all gears ---> bestRoute2
                 List<BoundingBox> allTempBoxes = CombineBreps(customized_part, currModel);
@@ -1240,7 +1256,7 @@ namespace DynaModel_v2.Final_Stage
                 if (allTempBoxes.Count > 0)
                 {
                     GetVoxelSpace(currModel, 2, tempBoxes: allTempBoxes);
-                    bestRoute2 = FindShortestPath(customized_part_center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), customized_part, currModel, 1);
+                    bestRoute2 = FindShortestPath(customized_part_center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), customized_part, currModel, "LED light");
                 }
                 voxelSpace = null;
                 #endregion
@@ -1411,6 +1427,7 @@ namespace DynaModel_v2.Final_Stage
             Intersection.BrepBrep(customized_part, currModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints);
             Curve customized_part_curve = intersectionCurves[0];
 
+
             voxelSpace = null;
             GetVoxelSpace(currModel, 1, currModel);
 
@@ -1442,7 +1459,7 @@ namespace DynaModel_v2.Final_Stage
                 }
             }
 
-            List<Point3d> bestRoute1 = FindShortestPath(end_point, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 2);
+            List<Point3d> bestRoute1 = FindShortestPath(end_point, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, "Touch");
 
             Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
             bestRoute = bestRoute.Trim(CurveEnd.Both, bestRoute.GetLength() / 12);
@@ -1462,7 +1479,7 @@ namespace DynaModel_v2.Final_Stage
 
             Curve pipe_end_circle = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3).ToNurbsCurve();
             if (!Curve.DoDirectionsMatch(customized_part_curve, pipe_end_circle))
-                pipe_start_circle.Reverse();
+                pipe_end_circle.Reverse();
             start = customized_part_curve.PointAtStart;
             pipe_end_circle.ClosestPoint(start, out t);
             pipe_end_circle.ChangeClosedCurveSeam(t);
@@ -1471,28 +1488,98 @@ namespace DynaModel_v2.Final_Stage
             customized_part = loftBreps[0];
             customized_part = customized_part.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-            Brep[] faces = currModel.Split(new[] { customized_part_curve }, myDoc.ModelAbsoluteTolerance);
-            Brep patch = new Brep();
-            if (faces.Length > 0)
+            if (customized_part != null && customized_part.IsSolid && customized_part.IsManifold)
             {
-                patch = faces[0];
-                foreach (var face in faces)
+                Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance, true);
+                if(difference != null && difference.Length > 0)
                 {
-                    if (face.Faces.Count < patch.Faces.Count)
-                        patch = face;
+                    myDoc.Objects.Add(customized_part);
+                    myDoc.Objects.Add(conductive_pipe);
+                    myDoc.Objects.Add(source_extension);
+                    //myDoc.Objects.Add(touch);
+                    myDoc.Objects.Hide(currModelObjId, true);
+                    currModel_Hollowed = difference[0];
+                }
+                else
+                {
+                    RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
+                    return false;
                 }
             }
-            Brep touch = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
-            
-            if(touch == null || touch.IsSolid)
+            else
             {
-                touch = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
+                Brep[] faces = currModel.Split(new[] { customized_part_curve }, myDoc.ModelAbsoluteTolerance);
+                Brep patch = new Brep();
+                if (faces.Length > 0)
+                {
+                    patch = faces[0];
+                    foreach (var face in faces)
+                    {
+                        if (face.Faces.Count < patch.Faces.Count)
+                            patch = face;
+                    }
+                }
+                Brep touch = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
+                Brep touch2;
+                if (touch == null || !touch.IsSolid)
+                {
+                    touch2 = Brep.MergeBreps(new[] { customized_part, savedItem.customized_part_patch[0] }, myDoc.ModelAbsoluteTolerance);
+                    if(touch2 == null || !touch.IsSolid)
+                    {
+                        myDoc.Objects.Add(customized_part);
+                        myDoc.Objects.Add(patch);
+                        RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
+                        return false;
+                    }
+                    else
+                    {
+                        customized_part = touch2;
+                        Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance, true);
+                        if(difference != null && difference.Length > 0)
+                        {
+                            myDoc.Objects.Add(customized_part);
+                            myDoc.Objects.Add(conductive_pipe);
+                            myDoc.Objects.Add(source_extension);
+                            //myDoc.Objects.Add(touch);
+                            myDoc.Objects.Hide(currModelObjId, true);
+                            currModel_Hollowed = difference[0];
+                        }
+                        else
+                        {
+                            RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
+                            return false;
+                        }
+
+
+                    }
+                }
+                else
+                {
+                    customized_part = touch;
+                    Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance, true);
+                    if (difference != null && difference.Length > 0)
+                    {
+                        myDoc.Objects.Add(customized_part);
+                        myDoc.Objects.Add(conductive_pipe);
+                        myDoc.Objects.Add(source_extension);
+                        //myDoc.Objects.Add(touch);
+                        myDoc.Objects.Hide(currModelObjId, true);
+                        currModel_Hollowed = difference[0];
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
+                        return false;
+                    }
+                }
+                
             }
 
-            myDoc.Objects.Add(conductive_pipe);
-            myDoc.Objects.Add(source_extension);
-            myDoc.Objects.Add(touch);
+
             myDoc.Objects.Hide(currModelObjId, true);
+
+            //Brep[] differences = Brep.CreateBooleanDifference(currModel_Hollowed, touch, myDoc.ModelAbsoluteTolerance);
+            //currModel_Hollowed = differences[0];
 
 
             return true;
@@ -1519,16 +1606,16 @@ namespace DynaModel_v2.Final_Stage
                 PipeExit pipeExit = new PipeExit();
                 if (pipeExit.location == null)
                 {
-                    if(conductivePipeExitPts.Count == 0)
+                    if (conductivePipeExitPts.Count == 0)
                     {
                         BoundingBox boundingBox = currModel.GetBoundingBox(true);
                         GetConductivePipeExits(currModel);
                     }
 
                     bool allTaken = true;
-                    foreach(var item in conductivePipeExitPts)
+                    foreach (var item in conductivePipeExitPts)
                     {
-                        if(item.isTaken == false && item.location.isTaken == false)
+                        if (item.isTaken == false && item.location.isTaken == false)
                         {
                             pipeExit = item;
                             item.isTaken = true;
@@ -1536,7 +1623,7 @@ namespace DynaModel_v2.Final_Stage
                             break;
                         }
                     }
-                    if(allTaken)
+                    if (allTaken)
                     {
                         RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore Button parameters");
                         return false;
@@ -1544,12 +1631,13 @@ namespace DynaModel_v2.Final_Stage
                 }
                 Point3d customized_part_center;
                 spring_part_circle.TryGetCircle(out Circle circle);
-                
-                List<Point3d> bestRoute1 = FindShortestPath(circle.Center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 2);
+
+                List<Point3d> bestRoute1 = FindShortestPath(circle.Center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, "Button");
                 Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
+                myDoc.Objects.Add(bestRoute, redAttribute);
                 bestRoute = bestRoute.Trim(CurveEnd.Both, bestRoute.GetLength() / 12);
                 Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                
+
                 Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
                 Curve pipe_start_circle = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3).ToNurbsCurve();
                 if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
@@ -1581,8 +1669,15 @@ namespace DynaModel_v2.Final_Stage
                 myDoc.Objects.Add(conductive_part);
                 myDoc.Objects.Add(spring_part);
                 currModel_Hollowed = differences[0];
-                //myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
-                //currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
+                differences = Brep.CreateBooleanDifference(currModel_Hollowed, spring_extension, myDoc.ModelAbsoluteTolerance);
+
+                if (differences != null && differences.Length > 0)
+                {
+                    currModel_Hollowed = differences[0];
+                }
+
+                myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
+                currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
             }
             else
             {
@@ -1954,6 +2049,15 @@ namespace DynaModel_v2.Final_Stage
 
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
+                                bool changed = false;
+                                if(currModel_Hollowed.ClosestPoint(currentPt).DistanceTo(currentPt) < maximumDistance)
+                                {
+                                    voxelSpace[i, j, k].isTaken = true;
+                                    changed = true;
+                                }
+                                if (changed == true)
+                                    continue;
+
                                 foreach (var box in normalObjects_BrepBox)
                                 {
                                     //See if the point is strictly inside of the brep
@@ -1963,6 +2067,9 @@ namespace DynaModel_v2.Final_Stage
                                         break;
                                     }
                                 }
+                                if (changed == true)
+                                    continue;
+
                                 foreach (var brep in specialObjects_Brep)
                                 {
                                     //See if the point is strictly inside of the brep
@@ -2272,32 +2379,43 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
-            double smallestDistance = voxelSpace[estimated_i, estimated_j, estimated_k].GetDistance(point.X, point.Y, point.Z);
-            index.i = estimated_i;
-            index.j = estimated_j;
-            index.k = estimated_k;
-
-            for (int i = estimated_i - 5; i < estimated_i + 6; i++)
+            if(voxelSpace[estimated_i, estimated_j, estimated_k].isTaken == true)
             {
-                for (int j = estimated_j - 5; j < estimated_j + 6; j++)
-                {
-                    for (int k = estimated_k - 5; k < estimated_k + 6; k++)
-                    {
-                        if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
-                        {
-                            double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
+                //double smallestDistance = voxelSpace[estimated_i, estimated_j, estimated_k].GetDistance(point.X, point.Y, point.Z);
+                index.i = estimated_i;
+                index.j = estimated_j;
+                index.k = estimated_k;
+                bool found = false;
 
-                            if (distance < smallestDistance)
+                for (int i = estimated_i - 5; i < estimated_i + 6; i++)
+                {
+                    for (int j = estimated_j - 5; j < estimated_j + 6; j++)
+                    {
+                        for (int k = estimated_k - 5; k < estimated_k + 6; k++)
+                        {
+                            if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
                             {
-                                smallestDistance = distance;
-                                index.i = i;
-                                index.j = j;
-                                index.k = k;
+                                //double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
+
+                                if (voxelSpace[i, j, k].isTaken == false)
+                                {
+                                    //smallestDistance = distance;
+                                    index.i = i;
+                                    index.j = j;
+                                    index.k = k;
+                                    found = true;
+                                    break;
+                                }
                             }
                         }
+                        if(found == true)
+                            break;
                     }
+                    if (found == true)
+                        break;
                 }
             }
+            
             #endregion
 
             return index;
@@ -2343,7 +2461,7 @@ namespace DynaModel_v2.Final_Stage
                     {
                         for (int k = current.k - 1; k < current.k + 2; k++)
                         {
-                            if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
+                            if (i != current.i && j != current.j && k != current.k && i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
                             {
                                 if (goal.Equal(voxelSpace[i, j, k]))
                                     neighbors.Enqueue(voxelSpace[i, j, k]);
@@ -2369,7 +2487,7 @@ namespace DynaModel_v2.Final_Stage
         /// <param name="customized_part">The actual Brep object of the customized part</param>
         /// <param name="currModel">The current model that user wants to add pipe to</param>
         /// <returns></returns>
-        private List<Point3d> FindShortestPath(Point3d customized_part_center, Point3d base_part_center, Brep customized_part, Brep currModel, int mode)
+        private List<Point3d> FindShortestPath(Point3d customized_part_center, Point3d base_part_center, Brep customized_part, Brep currModel, string mode)
         {
             Line temp = new Line();
             Curve pipepath = temp.ToNurbsCurve();
@@ -2405,7 +2523,7 @@ namespace DynaModel_v2.Final_Stage
 
             #region Perform A* algorithm
             Voxel current;
-            if (mode == 1) //For light pipe
+            if (mode == "LED light" || mode == "Button") //For light pipe
             {
                 SimplePriorityQueue<Voxel, double> frontier = new SimplePriorityQueue<Voxel, double>();
                 List<Voxel> searchedVoxels = new List<Voxel>();
@@ -2438,7 +2556,7 @@ namespace DynaModel_v2.Final_Stage
                     }
                 }
             }
-            else if (mode == 2) //For air pipe
+            else if (mode == "Air Pipe" || mode == "Touch") //For air pipe
             {
                 SimplePriorityQueue<Voxel, double> frontier = new SimplePriorityQueue<Voxel, double>();
                 List<Voxel> searchedVoxels = new List<Voxel>();
@@ -2496,76 +2614,80 @@ namespace DynaModel_v2.Final_Stage
             //    myDoc.Objects.AddPoint(bestRoute_Point3d[i]);
             //});
 
-            #region Use the result of A* to generate routes that are less curvy
-
-            #region Method 1: Retrive route from the start to the end, it checks if the pipe generated by the straight line from current point to end point is not causing intersection
-            List<Point3d> interpolatedRoute_Point3d = new List<Point3d>();
-            interpolatedRoute_Point3d.Add(bestRoute_Point3d[0]);
-
-            Boolean isIntersected = false;
-            int index = 1;
-            while (isIntersected == true || !interpolatedRoute_Point3d[interpolatedRoute_Point3d.Count - 1].Equals(bestRoute_Point3d[bestRoute_Point3d.Count - 1]))
+            #region Use the result of A* to generate routes that are less curvy for LED light
+            if(mode == "LED light")
             {
-                Point3d endPoint = bestRoute_Point3d[bestRoute_Point3d.Count - index];
-                //Create a pipe for the current section of the line
-                Curve betterRoute = (new Line(interpolatedRoute_Point3d[interpolatedRoute_Point3d.Count - 1], endPoint)).ToNurbsCurve();
+                List<Point3d> interpolatedRoute_Point3d = new List<Point3d>();
+                interpolatedRoute_Point3d.Add(bestRoute_Point3d[0]);
 
-                if (betterRoute == null)
+                Boolean isIntersected = false;
+                int index = 1;
+                #region Retrive route from the start to the end, it checks if the pipe generated by the straight line from current point to end point is not causing intersection
+                while (isIntersected == true || !interpolatedRoute_Point3d[interpolatedRoute_Point3d.Count - 1].Equals(bestRoute_Point3d[bestRoute_Point3d.Count - 1]))
                 {
-                    interpolatedRoute_Point3d.Add(bestRoute_Point3d[bestRoute_Point3d.Count - index + 1]);
-                    index = 1;
-                    isIntersected = false;
-                    continue;
-                }
-                Brep[] pipe = Brep.CreatePipe(betterRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                    Point3d endPoint = bestRoute_Point3d[bestRoute_Point3d.Count - index];
+                    //Create a pipe for the current section of the line
+                    Curve betterRoute = (new Line(interpolatedRoute_Point3d[interpolatedRoute_Point3d.Count - 1], endPoint)).ToNurbsCurve();
 
-
-                //Check if the Pipe is intersecting with other breps
-                var allObjects = new List<RhinoObject>(myDoc.Objects.GetObjectList(ObjectType.Brep));
-                foreach (var item in allObjects)
-                {
-                    Guid guid = item.Id;
-                    ObjRef currObj = new ObjRef(guid);
-                    Brep brep = currObj.Brep();
-
-                    if (brep != null)
+                    if (betterRoute == null)
                     {
-                        //Ignore the current model and customized part
-                        if (brep.IsDuplicate(currModel, myDoc.ModelAbsoluteTolerance) || brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance) || ignorePipesGuid.Any(g => guid == g))
-                        {
-                            continue;
-                        }
+                        interpolatedRoute_Point3d.Add(bestRoute_Point3d[bestRoute_Point3d.Count - index + 1]);
+                        index = 1;
+                        isIntersected = false;
+                        continue;
+                    }
+                    Brep[] pipe = Brep.CreatePipe(betterRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
-                        //Check for intersection, go to the next brep if no intersection is founded, else, break and report intersection found
-                        if (Intersection.BrepBrep(brep, pipe[0], myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints))
+
+                    //Check if the Pipe is intersecting with other breps
+                    var allObjects = new List<RhinoObject>(myDoc.Objects.GetObjectList(ObjectType.Brep));
+                    foreach (var item in allObjects)
+                    {
+                        Guid guid = item.Id;
+                        ObjRef currObj = new ObjRef(guid);
+                        Brep brep = currObj.Brep();
+
+                        if (brep != null)
                         {
-                            if (intersectionCurves.Length == 0 && intersectionPoints.Length == 0)
+                            //Ignore the current model and customized part
+                            if (brep.IsDuplicate(currModel, myDoc.ModelAbsoluteTolerance) || brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance) || ignorePipesGuid.Any(g => guid == g))
                             {
-                                isIntersected = false;
                                 continue;
                             }
-                            else
+
+                            //Check for intersection, go to the next brep if no intersection is founded, else, break and report intersection found
+                            if (Intersection.BrepBrep(brep, pipe[0], myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints))
                             {
-                                isIntersected = true;
-                                index += 1;
-                                break;
+                                if (intersectionCurves.Length == 0 && intersectionPoints.Length == 0)
+                                {
+                                    isIntersected = false;
+                                    continue;
+                                }
+                                else
+                                {
+                                    isIntersected = true;
+                                    index += 1;
+                                    break;
+                                }
                             }
                         }
                     }
-                }
 
-                if (isIntersected)
-                {
-                    continue;
-                }
+                    if (isIntersected)
+                    {
+                        continue;
+                    }
 
-                interpolatedRoute_Point3d.Add(endPoint);
-                index = 1;
+                    interpolatedRoute_Point3d.Add(endPoint);
+                    index = 1;
+                }
+                #endregion
+                return interpolatedRoute_Point3d;
             }
             #endregion
-            return interpolatedRoute_Point3d;
 
-            #endregion
+            return bestRoute_Point3d;
+
         }
         #endregion
 

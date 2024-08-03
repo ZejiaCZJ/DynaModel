@@ -209,7 +209,7 @@ namespace DynaModel_v2.Touch
                         if(customized_part_curve.IsClosed && pipe_end_circle.IsClosed)
                         {
                             if (!Curve.DoDirectionsMatch(customized_part_curve, pipe_end_circle))
-                                pipe_start_circle.Reverse();
+                                pipe_end_circle.Reverse();
                             start = customized_part_curve.PointAtStart;
                             pipe_end_circle.ClosestPoint(start, out t);
                             pipe_end_circle.ChangeClosedCurveSeam(t);
@@ -229,6 +229,8 @@ namespace DynaModel_v2.Touch
                                         patch = face;
                                 }
                             }
+                            myDoc.Objects.Add(customized_part);
+                            myDoc.Objects.Add(patch);
                             customized_part = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
                             savedItem.customized_part_patch = new List<Brep> { patch };
                         }
@@ -239,7 +241,7 @@ namespace DynaModel_v2.Touch
 
                         savedItem.EndPoint = tempPt;
                         savedItem.Name = "Touch";
-                        savedItem.EndPointModel = new List<Brep>{ customized_part};
+                        savedItem.EndPointModel = new List<Brep>{ customized_part_sphere.ToBrep()};
                         DA.SetData(0, savedItem);
                     }
                 }
