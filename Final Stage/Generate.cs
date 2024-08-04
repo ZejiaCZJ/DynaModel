@@ -147,7 +147,7 @@ namespace DynaModel_v2.Final_Stage
                             Brep supportPillar = Brep.CreatePipe(crv, 1.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
                             for (int j = 0; j < allBreps_guid.Count; j++)
                             {
-                                if (generateHelper.gaskets_guid.All(g => g != allBreps_guid[j]) && allBreps_guid[j] != generateHelper.currModel_Hollowed_ObjId && allPillars.All(g => g != allBreps_guid[j]))
+                                if (generateHelper.gaskets_guid.All(g => g != allBreps_guid[j]) && allBreps_guid[j] != generateHelper.currModel_Hollowed_ObjId && allPillars.All(g => g != allBreps_guid[j]) && generateHelper.conductive_pipes_guid.All(g => g != allBreps_guid[j]) && generateHelper.led_pipes_guid.All(g => g != allBreps_guid[j]))
                                 {
                                     Intersection.BrepBrep(supportPillar, allBreps[j], myDoc.ModelAbsoluteTolerance, out Curve[] overlapCurves, out Point3d[] intersectionPts);
                                     if (overlapCurves.Length != 0 || intersectionPts.Length != 0)
@@ -174,10 +174,81 @@ namespace DynaModel_v2.Final_Stage
                                         }
                                     }
                                 }
+
+                                //boolean difference the support pillar with intersected pipes
+
+                                if(supportPillar != null)
+                                {
+                                    bool found = false;
+                                    breps = Brep.CreateBooleanDifference(new[] { supportPillar }, generateHelper.led_pipes, myDoc.ModelAbsoluteTolerance);
+                                    List<Brep> pillars = new List<Brep>();
+                                    if(breps != null && breps.Length == 2)
+                                    {
+                                        Brep first = breps[0];
+                                        Brep second = breps[1];
+                                        if (first.GetVolume() > second.GetVolume())
+                                            supportPillar = first;
+                                        else
+                                            supportPillar = second;
+                                        pillars.Add(supportPillar);
+                                        
+                                    }
+                                    //Some pipe cuts off the support pillar into half
+                                    else if (breps != null && breps.Length > 2)
+                                    {
+                                        List<Brep> temp_brep = breps.ToList();
+                                        temp_brep.Sort((a, b) => a.GetVolume().CompareTo(b.GetVolume()));
+                                        Brep first = breps[breps.Length - 1];
+                                        Brep second = breps[breps.Length - 2];
+                                        pillars.Add(first);
+                                        pillars.Add(second);
+                                    }
+                                    //else if (breps != null && breps.Length == 1)
+                                    //{
+                                    //    supportPillar = breps[0];
+                                    //    pillars.Add(supportPillar);
+                                    //}
+                                    else if (breps == null || breps.Length == 0)
+                                    {
+                                        pillars.Add(supportPillar);
+                                    }
+                                    
+                                    foreach(var pillar in pillars)
+                                    {
+                                        breps = Brep.CreateBooleanDifference(new[] { pillar }, generateHelper.conductive_pipes, myDoc.ModelAbsoluteTolerance);
+                                        if (breps != null && breps.Length == 1)
+                                        {
+                                            Brep first = breps[0];
+                                            allPillars.Add(myDoc.Objects.Add(first));
+                                            found = true;
+                                        }
+                                        else if (breps != null && breps.Length >= 2)
+                                        {
+                                            List<Brep> temp_brep = breps.ToList();
+                                            temp_brep.Sort((a, b) => a.GetVolume().CompareTo(b.GetVolume()));
+                                            Brep first = breps[breps.Length - 1];
+                                            Brep second = breps[breps.Length - 2];
+                                            allPillars.Add(myDoc.Objects.Add(first));
+                                            allPillars.Add(myDoc.Objects.Add(second));
+                                            found = true;
+                                        }
+                                        else if (breps == null || breps.Length == 0)
+                                        {
+                                            allPillars.Add(myDoc.Objects.Add(pillar));
+                                            found = true;
+                                        }
+                                    }
+
+
+                                    if (found)
+                                        break;
+
+
+                                }
                                 
-                                allPillars.Add(myDoc.Objects.Add(supportPillar));
-                                break;
                             }
+                            
+                            
                         }
 
                     }
