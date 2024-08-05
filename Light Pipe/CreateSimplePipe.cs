@@ -363,7 +363,7 @@ namespace DynaModel_v2.Light_Pipe
                         Curve bestRoute;
 
                         bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
-
+                        
                         // Delete all temp boxes
                         foreach (var box in allTempBoxesGuid)
                         {
@@ -375,7 +375,7 @@ namespace DynaModel_v2.Light_Pipe
                         //Cut the first 5mm of the bestRoute to generate the inner pipe
                         //Double[] divisionParameters = bestRoute.DivideByLength(5, true, out Point3d[] points);
                         Curve lightGuidePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() - 7);
-                        Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.End, 7);
+                        Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.End, bestRoute.GetLength()/8);
 
                         List<GeometryBase> geometryBases = new List<GeometryBase>();
                         geometryBases.Add(customized_part);
@@ -788,6 +788,11 @@ namespace DynaModel_v2.Light_Pipe
 
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
+                                if (currModel.ClosestPoint(currentPt).DistanceTo(currentPt) < maximumDistance + 2)
+                                {
+                                    voxelSpace[i, j, k].isTaken = true;
+                                    continue;
+                                }
                                 foreach (var item in allObjects)
                                 {
                                     Guid guid = item.Id;
@@ -960,33 +965,46 @@ namespace DynaModel_v2.Light_Pipe
                 estimated_k = 0;
             #endregion
 
-            #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
-            double smallestDistance = voxelSpace[estimated_i, estimated_j, estimated_k].GetDistance(point.X, point.Y, point.Z);
+
+            double smallestDistance = double.MaxValue;
             index.i = estimated_i;
             index.j = estimated_j;
             index.k = estimated_k;
-
-            for (int i = estimated_i - 5; i < estimated_i + 6; i++)
+            bool found = false;
+            #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
+            if (voxelSpace[estimated_i, estimated_j, estimated_k].isTaken)
             {
-                for (int j = estimated_j - 5; j < estimated_j + 6; j++)
+                for (int i = estimated_i - 8; i < estimated_i + 9; i++)
                 {
-                    for (int k = estimated_k - 5; k < estimated_k + 6; k++)
+                    for (int j = estimated_j - 8; j < estimated_j + 9; j++)
                     {
-                        if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
+                        for (int k = estimated_k - 8; k < estimated_k + 9; k++)
                         {
-                            double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
-
-                            if (distance < smallestDistance)
+                            if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
                             {
-                                smallestDistance = distance;
-                                index.i = i;
-                                index.j = j;
-                                index.k = k;
+                                double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
+
+                                if (voxelSpace[i, j, k].isTaken == false && distance < smallestDistance)
+                                {
+                                    smallestDistance = distance;
+                                    index.i = i;
+                                    index.j = j;
+                                    index.k = k;
+                                    found = true;
+                                    break;
+                                }
                             }
+                            if (found == true)
+                                break;
                         }
+                        if (found == true)
+                            break;
                     }
+                    if (found == true)
+                        break;
                 }
             }
+
             #endregion
 
             return index;
@@ -1174,7 +1192,8 @@ namespace DynaModel_v2.Light_Pipe
                     isIntersected = false;
                     continue;
                 }
-                Brep[] pipe = Brep.CreatePipe(betterRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                betterRoute = betterRoute.Trim(CurveEnd.Both, 7);
+                Brep[] pipe = Brep.CreatePipe(betterRoute, 2.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 
                 //Check if the Pipe is intersecting with other breps
@@ -1188,7 +1207,7 @@ namespace DynaModel_v2.Light_Pipe
                     if (brep != null)
                     {
                         //Ignore the current model and customized part
-                        if (brep.IsDuplicate(currModel, myDoc.ModelAbsoluteTolerance) || brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance) || ignorePipes.Any(ignorePipe => !brep.IsDuplicate(ignorePipe, myDoc.ModelAbsoluteTolerance)))
+                        if (brep.IsDuplicate(customized_part, myDoc.ModelAbsoluteTolerance) || ignorePipes.Any(ignorePipe => !brep.IsDuplicate(ignorePipe, myDoc.ModelAbsoluteTolerance)))
                         {
                             continue;
                         }
