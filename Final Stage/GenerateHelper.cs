@@ -1289,7 +1289,7 @@ namespace DynaModel_v2.Final_Stage
 
                 #region Create Pipes
                 //Cut the first 5mm of the bestRoute to generate the inner pipe
-                Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.Both, bestRoute.GetLength()/6);
+                Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength()/10);
 
                 Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                 Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 3, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
@@ -1990,23 +1990,24 @@ namespace DynaModel_v2.Final_Stage
 
                 BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
-                int w = (int)Math.Abs(boundingBox.Max.X - boundingBox.Min.X) * voxelSpace_offset; //width
-                int l = (int)Math.Abs(boundingBox.Max.Y - boundingBox.Min.Y) * voxelSpace_offset; //length
-                int h = (int)Math.Abs(boundingBox.Max.Z - boundingBox.Min.Z) * voxelSpace_offset; //height
+                int w = (int)Math.Abs(boundingBox.Max.X - boundingBox.Min.X) /2; //width
+                int l = (int)Math.Abs(boundingBox.Max.Y - boundingBox.Min.Y) /2; //length
+                int h = (int)Math.Abs(boundingBox.Max.Z - boundingBox.Min.Z) /2; //height
 
 
 
                 voxelSpace = new Voxel[w, l, h];
 
-                double offset_spacer = 1 / voxelSpace_offset;
+                Double maximumDistance = 3;//TODO: Try different distance metric to get better result. Euclidean: Math.Sqrt(Math.Pow((voxelSpace_offset + 1), 2) * 3)
+                Double distance_from_edge = 6;
 
                 #region Initialize the voxel space element-wise
                 Parallel.For(0, w, i =>
                 {
                     for (int j = 0; j < l; j++)
                     {
-                        double baseX = i + boundingBox.Min.X;
-                        double baseY = j + boundingBox.Min.Y;
+                        double baseX = i*2 + boundingBox.Min.X;
+                        double baseY = j*2 + boundingBox.Min.Y;
 
 
                         Point3d basePoint = new Point3d(baseX, baseY, boundingBox.Min.Z - 1);
@@ -2043,7 +2044,7 @@ namespace DynaModel_v2.Final_Stage
 
                         for (int k = 0; k < h; k++)
                         {
-                            double currentZ = offset_spacer * k + boundingBox.Min.Z;
+                            double currentZ = 2 * k + boundingBox.Min.Z;
                             Point3d currentPt = new Point3d(baseX, baseY, currentZ);
                             voxelSpace[i, j, k] = new Voxel
                             {
@@ -2075,13 +2076,9 @@ namespace DynaModel_v2.Final_Stage
 
 
                             //Traverse all objects in the Rhino View to check for intersection. 
-                            Boolean intersected = false;
-                            Double maximumDistance = 3;//TODO: Try different distance metric to get better result. Euclidean: Math.Sqrt(Math.Pow((voxelSpace_offset + 1), 2) * 3)
-
-
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
-                                if (currModel_Hollowed.ClosestPoint(currentPt).DistanceTo(currentPt) < 3 + 2)
+                                if (currModel_Hollowed.ClosestPoint(currentPt).DistanceTo(currentPt) < distance_from_edge)
                                 {
                                     voxelSpace[i, j, k].isTaken = true;
                                     continue;
@@ -2126,9 +2123,9 @@ namespace DynaModel_v2.Final_Stage
                 double maximumDistance = 4;
                 BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
-                int w = (int)Math.Abs(boundingBox.Max.X - boundingBox.Min.X) * voxelSpace_offset; //width
-                int l = (int)Math.Abs(boundingBox.Max.Y - boundingBox.Min.Y) * voxelSpace_offset; //length
-                int h = (int)Math.Abs(boundingBox.Max.Z - boundingBox.Min.Z) * voxelSpace_offset; //height
+                int w = (int)Math.Abs((boundingBox.Max.X - boundingBox.Min.X)/2); //width
+                int l = (int)Math.Abs((boundingBox.Max.Y - boundingBox.Min.Y)/2); //length
+                int h = (int)Math.Abs((boundingBox.Max.Z - boundingBox.Min.Z)/2); //height
 
 
                 Parallel.For(0, w, i =>
@@ -2381,13 +2378,9 @@ namespace DynaModel_v2.Final_Stage
             BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
             #region Calculate an estimated index
-            double w = boundingBox.Max.X - boundingBox.Min.X; //width
-            double h = boundingBox.Max.Y - boundingBox.Min.Y; //length
-            double l = boundingBox.Max.Z - boundingBox.Min.Z; //height
-
-            int estimated_i = (int)((point.X - boundingBox.Min.X) * voxelSpace_offset);
-            int estimated_j = (int)((point.Y - boundingBox.Min.Y) * voxelSpace_offset);
-            int estimated_k = (int)((point.Z - boundingBox.Min.Z) * voxelSpace_offset);
+            int estimated_i = (int)Math.Abs((point.X - boundingBox.Min.X) / 2);
+            int estimated_j = (int)Math.Abs((point.Y - boundingBox.Min.Y) / 2);
+            int estimated_k = (int)Math.Abs((point.Z - boundingBox.Min.Z) / 2);
 
             if (estimated_i >= voxelSpace.GetLength(0))
                 estimated_i = voxelSpace.GetLength(0) - 1;
@@ -2627,17 +2620,41 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             //TODO: Set the accurate location of the start and end
-            //bestRoute_Point3d[0] = base_part_center;
-            bestRoute_Point3d.Add(customized_part_center);
+            double min_distance = double.MaxValue;
+            int closestIndex = 0;
+            for (int i = 0; i < bestRoute_Point3d.Count; i++)
+            {
+                if (bestRoute_Point3d[i].DistanceToSquared(customized_part_center) < min_distance)
+                {
+                    min_distance = bestRoute_Point3d[i].DistanceToSquared(customized_part_center);
+                    closestIndex = i;
+                }
+            }
 
-            //Parallel.For(0, bestRoute_Point3d.Count, i =>{
-            //    myDoc.Objects.AddPoint(bestRoute_Point3d[i]);
-            //});
+            bestRoute_Point3d.RemoveRange(closestIndex, bestRoute_Point3d.Count - closestIndex - 1);
+
+            List<int> indexes = new List<int>();
+            for (int i = 0; i < bestRoute_Point3d.Count; i++)
+            {
+                if (bestRoute_Point3d[i].Z > customized_part_center.Z)
+                {
+                    indexes.Add(i);
+                }
+            }
+            indexes.Sort((a, b) => b.CompareTo(a));
+            foreach (int i in indexes)
+            {
+                if (i >= 0 && i < bestRoute_Point3d.Count)
+                    bestRoute_Point3d.RemoveAt(i);
+            }
+
+            Line line = new Line(bestRoute_Point3d[bestRoute_Point3d.Count - 1], customized_part_center);
+            bestRoute_Point3d.Add(line.ToNurbsCurve().PointAtLength(line.Length / 2));
 
             #region Use the result of A* to generate routes that are less curvy
 
             #region Method 1: Retrive route from the start to the end, it checks if the pipe generated by the straight line from current point to end point is not causing intersection
-            if(mode == 1)
+            if (mode == 1)
             {
                 List<Point3d> interpolatedRoute_Point3d = new List<Point3d>();
                 interpolatedRoute_Point3d.Add(bestRoute_Point3d[0]);
@@ -2658,7 +2675,7 @@ namespace DynaModel_v2.Final_Stage
                         continue;
                     }
                     betterRoute = betterRoute.Trim(CurveEnd.Both, betterRoute.GetLength()/8);
-                    Brep[] pipe = Brep.CreatePipe(betterRoute, 2.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                    Brep[] pipe = Brep.CreatePipe(betterRoute, 3.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 
                     //Check if the Pipe is intersecting with other breps

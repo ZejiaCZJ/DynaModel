@@ -355,6 +355,8 @@ namespace DynaModel_v2.Light_Pipe
                         
 
                         List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
+                        foreach (var point in bestRoute1)
+                            myDoc.Objects.AddPoint(point);
                         #endregion
 
                         #region Determine which line is better by calculating the total angle of the route
@@ -374,13 +376,13 @@ namespace DynaModel_v2.Light_Pipe
                         #region Create Pipes
                         //Cut the first 5mm of the bestRoute to generate the inner pipe
                         //Double[] divisionParameters = bestRoute.DivideByLength(5, true, out Point3d[] points);
-                        Curve lightGuidePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() - 7);
-                        Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.End, bestRoute.GetLength()/8);
+                        //Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.End, bestRoute.GetLength()/8);
+
+                        Curve soluablePipeRoute = bestRoute;
 
                         List<GeometryBase> geometryBases = new List<GeometryBase>();
                         geometryBases.Add(customized_part);
 
-                        lightGuidePipeRoute = lightGuidePipeRoute.Extend(CurveEnd.End, 100, CurveExtensionStyle.Line);
                         soluablePipeRoute = soluablePipeRoute.Extend(CurveEnd.Start, 100, CurveExtensionStyle.Line);
 
                         Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
@@ -391,34 +393,16 @@ namespace DynaModel_v2.Light_Pipe
                         Guid conductivePipeGuid = myDoc.Objects.Add(conductivePipe[0], redAttribute);
                         InViewObject conductiveObject = new InViewObject(conductivePipe[0], conductivePipeGuid, "conductive pipe");
 
-                        soluablePipeRoute = bestRoute.Trim(CurveEnd.End, 7);
+                        Curve soluablePipeRoute2 = bestRoute.Trim(CurveEnd.End, 7);
                         //soluablePipeRoute = soluablePipeRoute.Trim(1, 1);
-                        combinableLightPipeRoute.Add(soluablePipeRoute);
+                        combinableLightPipeRoute.Add(soluablePipeRoute2);
                         combinableLightPipe.Add(soluablePipe[0]);
                         conductiveObjects.Add(conductiveObject);
 
                         Intersection.BrepBrep(customized_part, currModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves1, out Point3d[] intersectionPoints1);
-                        BrepEdge pipeEndEdge = null;
-                        double minDistance = double.MaxValue;
+                        Circle pipeEndEdge = new Circle(new Plane(soluablePipeRoute.PointAtEnd, soluablePipeRoute.TangentAtEnd), 2.2);
 
-                        foreach (var edge in soluablePipe[0].Edges)
-                        {
-                            if (edge.TryGetCircle(out Circle circle))
-                            {
-                                if (edge.ClosestPoint(soluablePipeRoute.PointAtEnd, out double t))
-                                {
-                                    Point3d pt = edge.PointAt(t);
-                                    double distance = pt.DistanceTo(soluablePipeRoute.PointAtEnd);
-                                    if (distance < minDistance)
-                                    {
-                                        pipeEndEdge = edge;
-                                        minDistance = distance;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (pipeEndEdge != null)
+                        if (pipeEndEdge.IsValid)
                         {
                             //myDoc.Objects.AddCurve(intersectionCurves1[0]);
                             //myDoc.Objects.AddCurve(pipeEndEdge.ToNurbsCurve());
@@ -697,23 +681,21 @@ namespace DynaModel_v2.Light_Pipe
 
                 BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
-                int w = (int)Math.Abs(boundingBox.Max.X - boundingBox.Min.X) * voxelSpace_offset; //width
-                int l = (int)Math.Abs(boundingBox.Max.Y - boundingBox.Min.Y) * voxelSpace_offset; //length
-                int h = (int)Math.Abs(boundingBox.Max.Z - boundingBox.Min.Z) * voxelSpace_offset; //height
+                int w = (int)Math.Abs(boundingBox.Max.X - boundingBox.Min.X) /2; //width
+                int l = (int)Math.Abs(boundingBox.Max.Y - boundingBox.Min.Y) /2; //length
+                int h = (int)Math.Abs(boundingBox.Max.Z - boundingBox.Min.Z) /2; //height
 
 
 
                 voxelSpace = new Voxel[w, l, h];
-
-                double offset_spacer = 1 / voxelSpace_offset;
 
                 #region Initialize the voxel space element-wise
                 Parallel.For(0, w, i =>
                 {
                     for (int j = 0; j < l; j++)
                     {
-                        double baseX = i + boundingBox.Min.X;
-                        double baseY = j + boundingBox.Min.Y;
+                        double baseX = i*2 + boundingBox.Min.X;
+                        double baseY = j*2 + boundingBox.Min.Y;
 
 
                         Point3d basePoint = new Point3d(baseX, baseY, boundingBox.Min.Z - 1);
@@ -750,7 +732,7 @@ namespace DynaModel_v2.Light_Pipe
 
                         for (int k = 0; k < h; k++)
                         {
-                            double currentZ = offset_spacer * k + boundingBox.Min.Z;
+                            double currentZ = 2 * k + boundingBox.Min.Z;
                             Point3d currentPt = new Point3d(baseX, baseY, currentZ);
                             voxelSpace[i, j, k] = new Voxel
                             {
@@ -788,7 +770,7 @@ namespace DynaModel_v2.Light_Pipe
 
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
-                                if (currModel.ClosestPoint(currentPt).DistanceTo(currentPt) < maximumDistance + 2)
+                                if (currModel.ClosestPoint(currentPt).DistanceTo(currentPt) < maximumDistance)
                                 {
                                     voxelSpace[i, j, k].isTaken = true;
                                     continue;
@@ -848,16 +830,16 @@ namespace DynaModel_v2.Light_Pipe
             double offset = 2; //This offset stands for the gap between the edge of the PCB and the pipe exit
 
             //Left upper corner of the PCB
-            Point3d leftUpperCorner = new Point3d(base_part_center.X - pcbWidth / 2 + pipeRadius + offset, base_part_center.Y + pcbHeight / 2 - pipeRadius - offset, base_part_center.Z);
+            Point3d leftUpperCorner = new Point3d(base_part_center.X - pcbWidth / 2 + pipeRadius + offset, base_part_center.Y + pcbHeight / 2 - pipeRadius - offset, base_part_center.Z + 10);
 
             //Right upper corner of the PCB
-            Point3d rightUpperCorner = new Point3d(base_part_center.X + pcbWidth / 2 - pipeRadius - offset, base_part_center.Y + pcbHeight / 2 - pipeRadius - offset, base_part_center.Z);
+            Point3d rightUpperCorner = new Point3d(base_part_center.X + pcbWidth / 2 - pipeRadius - offset, base_part_center.Y + pcbHeight / 2 - pipeRadius - offset, base_part_center.Z + 10);
 
             //Left lower corner of the PCB
-            Point3d leftLowerCorner = new Point3d(base_part_center.X - pcbWidth / 2 + pipeRadius + offset, base_part_center.Y - pcbHeight / 2 + pipeRadius + offset, base_part_center.Z);
+            Point3d leftLowerCorner = new Point3d(base_part_center.X - pcbWidth / 2 + pipeRadius + offset, base_part_center.Y - pcbHeight / 2 + pipeRadius + offset, base_part_center.Z + 10);
 
             //Right lower corner of the PCB
-            Point3d rightLowerCorner = new Point3d(base_part_center.X + pcbWidth / 2 - pipeRadius - offset, base_part_center.Y - pcbHeight / 2 + pipeRadius + offset, base_part_center.Z);
+            Point3d rightLowerCorner = new Point3d(base_part_center.X + pcbWidth / 2 - pipeRadius - offset, base_part_center.Y - pcbHeight / 2 + pipeRadius + offset, base_part_center.Z + 10);
 
             Index lu = FindClosestPointIndex(leftUpperCorner, currModel);
             Index ru = FindClosestPointIndex(rightUpperCorner, currModel);
@@ -947,9 +929,10 @@ namespace DynaModel_v2.Light_Pipe
             double h = boundingBox.Max.Y - boundingBox.Min.Y; //length
             double l = boundingBox.Max.Z - boundingBox.Min.Z; //height
 
-            int estimated_i = (int)((point.X - boundingBox.Min.X) * voxelSpace_offset);
-            int estimated_j = (int)((point.Y - boundingBox.Min.Y) * voxelSpace_offset);
-            int estimated_k = (int)((point.Z - boundingBox.Min.Z) * voxelSpace_offset);
+
+            int estimated_i = (int)Math.Abs((point.X - boundingBox.Min.X) / 2);
+            int estimated_j = (int)Math.Abs((point.Y - boundingBox.Min.Y) / 2);
+            int estimated_k = (int)Math.Abs((point.Z - boundingBox.Min.Z) / 2);
 
             if (estimated_i >= voxelSpace.GetLength(0))
                 estimated_i = voxelSpace.GetLength(0) - 1;
@@ -1163,9 +1146,43 @@ namespace DynaModel_v2.Light_Pipe
             bestRoute_Point3d.Add(new Point3d(current.X, current.Y, current.Z));
             #endregion
 
+            foreach (var point in bestRoute_Point3d)
+                myDoc.Objects.AddPoint(point);
+
             //TODO: Set the accurate location of the start and end
             //bestRoute_Point3d[0] = base_part_center;
-            bestRoute_Point3d.Add(customized_part_center);
+            double min_distance = double.MaxValue;
+            int closestIndex = 0;
+            for(int i = 0; i < bestRoute_Point3d.Count; i++)
+            {
+                if (bestRoute_Point3d[i].DistanceToSquared(customized_part_center) < min_distance)
+                {
+                    min_distance = bestRoute_Point3d[i].DistanceToSquared(customized_part_center);
+                    closestIndex = i;
+                }
+            }
+            
+            bestRoute_Point3d.RemoveRange(closestIndex, bestRoute_Point3d.Count - closestIndex - 1);
+
+            List<int> indexes = new List<int>();
+            for (int i = 0; i < bestRoute_Point3d.Count; i++)
+            {
+                if (bestRoute_Point3d[i].Z > customized_part_center.Z)
+                {
+                    indexes.Add(i);
+                }
+            }
+            indexes.Sort((a, b) => b.CompareTo(a));
+            foreach (int i in indexes)
+            {
+                if (i >= 0 && i < bestRoute_Point3d.Count)
+                    bestRoute_Point3d.RemoveAt(i);
+            }
+
+            Line line = new Line(bestRoute_Point3d[bestRoute_Point3d.Count - 1], customized_part_center);
+            bestRoute_Point3d.Add(line.ToNurbsCurve().PointAtLength(line.Length / 2));
+
+            //bestRoute_Point3d.Add(customized_part_center);
 
             //Parallel.For(0, bestRoute_Point3d.Count, i =>{
             //    myDoc.Objects.AddPoint(bestRoute_Point3d[i]);
@@ -1192,7 +1209,6 @@ namespace DynaModel_v2.Light_Pipe
                     isIntersected = false;
                     continue;
                 }
-                betterRoute = betterRoute.Trim(CurveEnd.Both, 7);
                 Brep[] pipe = Brep.CreatePipe(betterRoute, 2.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 

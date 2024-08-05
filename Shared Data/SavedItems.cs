@@ -90,13 +90,15 @@ namespace DynaModel_v2.SharedData
                 }
                 else 
                 {
+                    myDoc.Objects.Add(planarSurface);
                     RhinoApp.WriteLine("The model's base is not planar. This software only support models that're planar at their base");
                     return;
                 }
 
                 currModel_box = currModel_Hollowed.GetBoundingBox(true);
-                circle = new Circle(new Point3d(0, 0, currModel_box.Min.Z + 0.1), 1000);
+                circle = new Circle(new Point3d(0, 0, currModel_box.Min.Z + 1), 1000);
                 planarSurface = Brep.CreatePlanarBreps(new[] { circle.ToNurbsCurve() }, myDoc.ModelAbsoluteTolerance)[0];
+                //myDoc.Objects.Add(planarSurface);
                 Intersection.BrepBrep(planarSurface, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoint);
                 if (GetLongestCurve(intersectionCurves, out Curve curve))
                     planarSurface = Brep.CreatePlanarBreps(new[] { curve }, myDoc.ModelAbsoluteTolerance)[0];
@@ -112,6 +114,7 @@ namespace DynaModel_v2.SharedData
                     RhinoApp.WriteLine("The model's base is not planar. This software only support models that're planar at their base");
                     return;
                 }
+                
 
                 Guid currModel_guid = myDoc.Objects.Add(currModel);
 
