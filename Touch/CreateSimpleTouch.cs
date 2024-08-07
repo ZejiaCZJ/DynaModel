@@ -280,7 +280,8 @@ namespace DynaModel_v2.Touch
                         myDoc.Objects.Add(conductive_pipe);
                         myDoc.Objects.Add(source_extension);
                         myDoc.Objects.Add(customized_part);
-                        myDoc.Objects.Add(currModel_hollowed);
+
+
 
                         savedItem.EndPoint = tempPt;
                         savedItem.Name = "Touch";
