@@ -259,45 +259,9 @@ namespace DynaModel_v2.Touch
                         Brep source_extension = loftBreps[0];
                         source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-                        Curve pipe_end_circle = new Circle(new Plane(route.PointAtEnd, route.TangentAtEnd), 3).ToNurbsCurve();
-                        if(customized_part_curve.IsClosed && pipe_end_circle.IsClosed)
-                        {
-                            if (!Curve.DoDirectionsMatch(pipe_end_circle, customized_part_curve))
-                                pipe_end_circle.Reverse();
-                            start = pipe_end_circle.PointAtStart;
-                            customized_part_curve.ClosestPoint(start, out t);
-                            customized_part_curve.ChangeClosedCurveSeam(t);
-
-                            
-
-                            if (!Curve.DoDirectionsMatch(pipe_end_circle, customized_part_curve))
-                                customized_part_curve.Reverse();
-
-                            //myDoc.Objects.Add(pipe_end_circle);
-                            //myDoc.Objects.Add(customized_part_curve);
-                            
-                            //myDoc.Objects.AddPoint(pipe_end_circle.PointAtStart);
-                            //myDoc.Objects.AddPoint(customized_part_curve.PointAtStart);
-
-                            crossSectionCurves = new Curve[] { pipe_end_circle, customized_part_curve };
-                            loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
-                            customized_part = loftBreps[0];
-                            customized_part = customized_part.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-                            Brep[] faces = currModel.Split(new[] { customized_part_curve }, myDoc.ModelAbsoluteTolerance);
-                            Brep patch = new Brep();
-                            if (faces.Length > 0)
-                            {
-                                patch = faces[0];
-                                foreach (var face in faces)
-                                {
-                                    if (face.Faces.Count < patch.Faces.Count)
-                                        patch = face;
-                                }
-                            }
-                            customized_part = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
-                            savedItem.customized_part_patch = new List<Brep> { patch };
-                        }
+                        
+                        Brep customized_part_extension = Brep.CreatePipe(new Line(route.PointAtEnd, customized_part_center).ToNurbsCurve(), 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                        
 
                         Brep[] difference = Brep.CreateBooleanDifference(currModel_hollowed, customized_part_sphere.ToBrep(), myDoc.ModelAbsoluteTolerance);
                         if (difference != null && difference.Length > 0)
@@ -306,8 +270,13 @@ namespace DynaModel_v2.Touch
                         difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_hollowed, myDoc.ModelAbsoluteTolerance);
                         if (difference != null && difference.Length > 0)
                             conductive_pipe = difference[0];
-                       
 
+
+                        difference = Brep.CreateBooleanDifference(new[] { customized_part_extension },new[] { currModel_hollowed, customized_part }, myDoc.ModelAbsoluteTolerance);
+                        if (difference != null && difference.Length > 0)
+                            customized_part_extension = difference[0];
+
+                        myDoc.Objects.Add(customized_part_extension);
                         myDoc.Objects.Add(conductive_pipe);
                         myDoc.Objects.Add(source_extension);
                         myDoc.Objects.Add(customized_part);

@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Description of DynaModel_v2")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+fb8a5bed1baeb123478b863bb1c484bf4cc115b7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+6cc2c96c2d83fe2c26044713219313d8aee2a352")]
 [assembly: System.Reflection.AssemblyProductAttribute("DynaModel_v2")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DynaModel_v2")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

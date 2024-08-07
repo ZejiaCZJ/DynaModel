@@ -1483,112 +1483,39 @@ namespace DynaModel_v2.Final_Stage
             Brep source_extension = loftBreps[0];
             source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
-            Curve pipe_end_circle = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3).ToNurbsCurve();
-            if (!Curve.DoDirectionsMatch(customized_part_curve, pipe_end_circle))
-                pipe_end_circle.Reverse();
-            start = customized_part_curve.PointAtStart;
-            pipe_end_circle.ClosestPoint(start, out t);
-            pipe_end_circle.ChangeClosedCurveSeam(t);
-            crossSectionCurves = new Curve[] { customized_part_curve, pipe_end_circle };
-            loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
-            customized_part = loftBreps[0];
-            customized_part = customized_part.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-            if (customized_part != null && customized_part.IsSolid && customized_part.IsManifold)
-            {
-                Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance, true);
-                if(difference != null && difference.Length > 0)
-                {
-                    conductive_pipes.Add(customized_part);
-                    conductive_pipes_guid.Add(myDoc.Objects.Add(customized_part));
-                    conductive_pipes.Add(conductive_pipe);
-                    conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_pipe));
-                    conductive_pipes.Add(source_extension);
-                    conductive_pipes_guid.Add(myDoc.Objects.Add(source_extension));
-                    //myDoc.Objects.Add(touch);
-                    myDoc.Objects.Hide(currModelObjId, true);
-                    currModel_Hollowed = difference[0];
-                }
-                else
-                {
-                    RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
-                    return false;
-                }
-            }
-            else
-            {
-                Brep[] faces = currModel.Split(new[] { customized_part_curve }, myDoc.ModelAbsoluteTolerance);
-                Brep patch = new Brep();
-                if (faces.Length > 0)
-                {
-                    patch = faces[0];
-                    foreach (var face in faces)
-                    {
-                        if (face.Faces.Count < patch.Faces.Count)
-                            patch = face;
-                    }
-                }
-                Brep touch = Brep.MergeBreps(new[] { customized_part, patch }, myDoc.ModelAbsoluteTolerance);
-                Brep touch2;
-                if (touch == null || !touch.IsSolid)
-                {
-                    touch2 = Brep.MergeBreps(new[] { customized_part, savedItem.customized_part_patch[0] }, myDoc.ModelAbsoluteTolerance);
-                    if(touch2 == null || !touch.IsSolid)
-                    {
-                        myDoc.Objects.Add(customized_part);
-                        myDoc.Objects.Add(patch);
-                        RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
-                        return false;
-                    }
-                    else
-                    {
-                        customized_part = touch2;
-                        Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance, true);
-                        if(difference != null && difference.Length > 0)
-                        {
-                            conductive_pipes.Add(customized_part);
-                            conductive_pipes_guid.Add(myDoc.Objects.Add(customized_part));
-                            conductive_pipes.Add(conductive_pipe);
-                            conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_pipe));
-                            conductive_pipes.Add(source_extension);
-                            conductive_pipes_guid.Add(myDoc.Objects.Add(source_extension));
-                            //myDoc.Objects.Add(touch);
-                            myDoc.Objects.Hide(currModelObjId, true);
-                            currModel_Hollowed = difference[0];
-                        }
-                        else
-                        {
-                            RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
-                            return false;
-                        }
+            Brep customized_part_extension = Brep.CreatePipe(new Line(bestRoute.PointAtEnd, end_point).ToNurbsCurve(), 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
 
-                    }
-                }
-                else
-                {
-                    customized_part = touch;
-                    Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance, true);
-                    if (difference != null && difference.Length > 0)
-                    {
-                        conductive_pipes.Add(customized_part);
-                        conductive_pipes_guid.Add(myDoc.Objects.Add(customized_part));
-                        conductive_pipes.Add(conductive_pipe);
-                        conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_pipe));
-                        conductive_pipes.Add(source_extension);
-                        conductive_pipes_guid.Add(myDoc.Objects.Add(source_extension));
-                        //myDoc.Objects.Add(touch);
-                        myDoc.Objects.Hide(currModelObjId, true);
-                        currModel_Hollowed = difference[0];
-                    }
-                    else
-                    {
-                        RhinoApp.WriteLine("Unable to create a touch parameter due to incompatible");
-                        return false;
-                    }
-                }
-                
-            }
+            Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance);
+            if (difference != null && difference.Length > 0)
+                currModel_Hollowed = difference[0];
+
+            difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+            if (difference != null && difference.Length > 0)
+                conductive_pipe = difference[0];
+
+            difference = Brep.CreateBooleanDifference(new[] { customized_part_extension }, new[] { currModel_Hollowed, customized_part }, myDoc.ModelAbsoluteTolerance);
+            if (difference != null && difference.Length > 0)
+                customized_part_extension = difference[0];
+
+            Guid source_extension_guid = myDoc.Objects.Add(source_extension);
+            Guid customized_part_extension_guid = myDoc.Objects.Add(customized_part_extension);
+            Guid conductive_pipe_guid = myDoc.Objects.Add(conductive_pipe);
+
+            specialPipes.Add(source_extension_guid);
+            specialPipes.Add(customized_part_extension_guid);
+            specialPipes.Add(conductive_pipe_guid);
+
+            conductive_pipes_guid.Add(source_extension_guid);
+            conductive_pipes_guid.Add(customized_part_extension_guid);
+            conductive_pipes_guid.Add(conductive_pipe_guid);
+
+            conductive_pipes.Add(source_extension);
+            conductive_pipes.Add(customized_part_extension);
+            conductive_pipes.Add(conductive_pipe);
+
+
+            myDoc.Objects.Add(customized_part);
 
 
             myDoc.Objects.Hide(currModelObjId, true);
