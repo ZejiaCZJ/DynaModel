@@ -1289,7 +1289,7 @@ namespace DynaModel_v2.Final_Stage
 
                 #region Create Pipes
                 //Cut the first 5mm of the bestRoute to generate the inner pipe
-                Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength()/10);
+                Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 10);
 
                 Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                 Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 3, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
@@ -1384,7 +1384,7 @@ namespace DynaModel_v2.Final_Stage
                         lightGuidPipe = lightGuidPipe.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
                         //Get the patch for the pipe
-                        if(!lightGuidPipe.IsSolid)
+                        if (!lightGuidPipe.IsSolid)
                         {
                             lightGuidPipe = Brep.MergeBreps(new[] { lightGuidPipe, savedItem.customized_part_patch[count] }, myDoc.ModelAbsoluteTolerance);
                         }
@@ -1399,7 +1399,7 @@ namespace DynaModel_v2.Final_Stage
                             return false;
                         }
                         Brep[] breps = Brep.CreateBooleanDifference(currModel_Hollowed, lightGuidPipe, myDoc.ModelAbsoluteTolerance);
-                        if(breps != null && breps.Length > 0)
+                        if (breps != null && breps.Length > 0)
                             currModel_Hollowed = Brep.CreateBooleanDifference(currModel_Hollowed, lightGuidPipe, myDoc.ModelAbsoluteTolerance)[0];
                         specialPipes.Add(a);
                         ignorePipesGuid.Add(a);
@@ -1409,12 +1409,6 @@ namespace DynaModel_v2.Final_Stage
                     }
                 }
 
-
-                //ignorePipes.Add(soluablePipe[0]);
-
-                //Guid g = myDoc.Objects.Add(soluablePipe[0], soluableAttribute);
-                //ignorePipesGuid.Add(g); //soluablePipe[1] if used CreateBooleanSplit
-                //specialPipes.Add(g); 
                 #endregion
             }
 
@@ -1474,7 +1468,7 @@ namespace DynaModel_v2.Final_Stage
             List<Point3d> bestRoute1 = FindShortestPath(end_point, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 2);
 
             Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
-            bestRoute = bestRoute.Trim(CurveEnd.Both, bestRoute.GetLength() / 12);
+            bestRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 15);
             Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
             Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
@@ -1655,8 +1649,8 @@ namespace DynaModel_v2.Final_Stage
 
                 List<Point3d> bestRoute1 = FindShortestPath(circle.Center, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 2);
                 Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
-                myDoc.Objects.Add(bestRoute, redAttribute);
-                bestRoute = bestRoute.Trim(CurveEnd.Both, bestRoute.GetLength() / 12);
+
+                bestRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 15);
                 Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
                 Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
@@ -1709,7 +1703,7 @@ namespace DynaModel_v2.Final_Stage
                 }
 
                 myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
-                currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
+                //currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
             }
             else
             {
@@ -1718,7 +1712,7 @@ namespace DynaModel_v2.Final_Stage
                 return false;
             }
 
-
+            myDoc.Objects.Hide(currModelObjId, true);
             return true;
         }
 
@@ -1998,16 +1992,17 @@ namespace DynaModel_v2.Final_Stage
 
                 voxelSpace = new Voxel[w, l, h];
 
-                Double maximumDistance = 3;//TODO: Try different distance metric to get better result. Euclidean: Math.Sqrt(Math.Pow((voxelSpace_offset + 1), 2) * 3)
-                Double distance_from_edge = 6;
+                Double pipe_radius = 3.2; //pipe width
+                Double thickness = 4; //hollowed-out model thickness
+                Double distance_from_edge = pipe_radius + thickness;
 
                 #region Initialize the voxel space element-wise
                 Parallel.For(0, w, i =>
                 {
                     for (int j = 0; j < l; j++)
                     {
-                        double baseX = i*2 + boundingBox.Min.X;
-                        double baseY = j*2 + boundingBox.Min.Y;
+                        double baseX = i * 2 + boundingBox.Min.X;
+                        double baseY = j * 2 + boundingBox.Min.Y;
 
 
                         Point3d basePoint = new Point3d(baseX, baseY, boundingBox.Min.Z - 1);
@@ -2078,7 +2073,7 @@ namespace DynaModel_v2.Final_Stage
                             //Traverse all objects in the Rhino View to check for intersection. 
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
-                                if (currModel_Hollowed.ClosestPoint(currentPt).DistanceTo(currentPt) < distance_from_edge)
+                                if (currModel.ClosestPoint(currentPt).DistanceTo(currentPt) < distance_from_edge)
                                 {
                                     voxelSpace[i, j, k].isTaken = true;
                                     continue;
@@ -2104,7 +2099,7 @@ namespace DynaModel_v2.Final_Stage
                                         }
 
                                         //See if the point is too close to the brep and will cause intersection after creating the pipe
-                                        if (brep.ClosestPoint(currentPt).DistanceTo(currentPt) <= maximumDistance)
+                                        if (brep.ClosestPoint(currentPt).DistanceTo(currentPt) <= pipe_radius)
                                         {
                                             voxelSpace[i, j, k].isTaken = true;
                                             break;
@@ -2123,9 +2118,9 @@ namespace DynaModel_v2.Final_Stage
                 double maximumDistance = 4;
                 BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
-                int w = (int)Math.Abs((boundingBox.Max.X - boundingBox.Min.X)/2); //width
-                int l = (int)Math.Abs((boundingBox.Max.Y - boundingBox.Min.Y)/2); //length
-                int h = (int)Math.Abs((boundingBox.Max.Z - boundingBox.Min.Z)/2); //height
+                int w = (int)Math.Abs((boundingBox.Max.X - boundingBox.Min.X) / 2); //width
+                int l = (int)Math.Abs((boundingBox.Max.Y - boundingBox.Min.Y) / 2); //length
+                int h = (int)Math.Abs((boundingBox.Max.Z - boundingBox.Min.Z) / 2); //height
 
 
                 Parallel.For(0, w, i =>
@@ -2674,7 +2669,7 @@ namespace DynaModel_v2.Final_Stage
                         isIntersected = false;
                         continue;
                     }
-                    betterRoute = betterRoute.Trim(CurveEnd.Both, betterRoute.GetLength()/8);
+                    //betterRoute = betterRoute.Trim(CurveEnd.Both, betterRoute.GetLength()/8);
                     Brep[] pipe = Brep.CreatePipe(betterRoute, 3.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 

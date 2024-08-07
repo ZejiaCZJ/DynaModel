@@ -311,7 +311,7 @@ namespace DynaModel_v2.Rotational_Motion
                     BoundingBox mainModel_bbox = mainModel.GetBoundingBox(true);
 
                     //Find central point of the base of the bounding box
-                    Point3d start_gear_centerPoint = new Point3d(mainModel_bbox.Center.X, mainModel_bbox.Center.Y, mainModel_bbox.Min.Z + 3);
+                    Point3d start_gear_centerPoint = new Point3d(mainModel_bbox.Center.X, mainModel_bbox.Center.Y, mainModel_bbox.Min.Z + 5);
                     Vector3d start_gear_Direction = new Vector3d(0, 0, 1);
                     Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
                     int start_gear_teethNum = 10;
@@ -490,7 +490,7 @@ namespace DynaModel_v2.Rotational_Motion
                     int second_driven_gear_teethNum = getNumTeeth(second_driven_gear_tipRadius);
 
                     SpurGear second_driven_gear = null;
-                    if (second_driven_gear_tipRadius > getTipRadius(8))
+                    if (second_driven_gear_tipRadius > getTipRadius(4))
                     {
                         Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
                         start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + second_driven_gear_tipRadius);
@@ -568,12 +568,30 @@ namespace DynaModel_v2.Rotational_Motion
 
 
                     List<GearSet> workable_gearsets = new List<GearSet>();
-
+                    int count = 0;
 
                     #region keep pushing the end gear inside of the model until it doesn't intersect with the model and it will be placed on the correct location where the connector gear will be appropriate in size and 
                     while (Intersection.BrepBrep(end_gear.Boundingbox_big, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints) && Intersection.BrepBrep(end_gear.Model, start_gear.Model, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves2, out Point3d[] intersectionPoints2)
                         && Intersection.BrepBrep(first_driven_gear.Boundingbox_big, mainModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves3, out Point3d[] intersectionPoints3) && Intersection.BrepBrep(connector_gear.Boundingbox_big, mainModel, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves4, out Point3d[] intersectionPoints4))
                     {
+                        count++;
+                        //if (count == 85)
+                        //{
+                        //    myDoc.Objects.Add(end_gear.Model);
+                        //    myDoc.Objects.Add(start_gear.Model);
+                        //    myDoc.Objects.Add(first_driven_gear.Model);
+                        //    myDoc.Objects.Add(connector_gear.Model);
+                        //    myDoc.Objects.Add(second_driven_gear.Model);
+                        //    myDoc.Objects.Add(shaft);
+                        //    myDoc.Objects.Add(first_driven_gear_bottom_gasket);
+                        //    myDoc.Objects.Add(first_driven_gear_top_gasket);
+                        //    myDoc.Objects.Add(connector_gear_bottom_gasket);
+                        //    myDoc.Objects.Add(connector_gear_top_gasket);
+                        //    myDoc.Objects.Add(end_gear_shaft);
+                        //    myDoc.Objects.Add(end_gear_top_gasket);
+                        //    myDoc.Objects.Add(end_gear_bottom_gasket);
+                        //    return;
+                        //}
                         //if all gears are in good condition, then stop the pushing action and show gears
                         if (intersectionCurves.Length == 0 && intersectionPoints.Length == 0 && intersectionCurves2.Length == 0 && intersectionPoints2.Length == 0 && intersectionCurves3.Length == 0 && intersectionPoints3.Length == 0 &&
                             intersectionCurves4.Length == 0 && intersectionPoints4.Length == 0 && (first_driven_gear.Boundingbox.Min.Z - start_gear_centerPoint.Z) > thickness && connector_gear_centerPoint.Equals(new Point3d(first_driven_gear.CenterPoint.X, first_driven_gear.CenterPoint.Y, start_gear_centerPoint.Z)) &&
@@ -581,6 +599,9 @@ namespace DynaModel_v2.Rotational_Motion
                             !checkIntersection(connector_gear_top_gasket, cuttedBrepObjId) && !checkIntersection(end_gear_shaft, cuttedBrepObjId) && !checkIntersection(end_gear_top_gasket, cuttedBrepObjId) && !checkIntersection(end_gear_bottom_gasket, cuttedBrepObjId) &&
                             !checkIntersection(end_gear.Model, cuttedBrepObjId) && !checkIntersection(first_driven_gear.Model, cuttedBrepObjId) && !checkIntersection(connector_gear.Model, cuttedBrepObjId))
                         {
+                            
+
+
                             if (second_driven_gear != null)
                             {
                                 Intersection.BrepBrep(second_driven_gear.Boundingbox_big, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -644,6 +665,7 @@ namespace DynaModel_v2.Rotational_Motion
                         {
                             if (workable_gearsets.Count > 0)
                                 break;
+                            RhinoApp.WriteLine($"Tried: {count}");
                             RhinoApp.WriteLine("Fail to create gear on your main model with the selected end effector.2");
                             DA.SetData(0, false);
                             return;
@@ -685,7 +707,7 @@ namespace DynaModel_v2.Rotational_Motion
 
                         //Adjust second driven gear if needed
                         second_driven_gear_tipRadius = (connector_gear.CenterPoint.DistanceTo(start_gear_centerPoint) - start_gear.BaseRadius - connector_gear.BaseRadius) / 2;
-                        if (second_driven_gear_tipRadius > getTipRadius(4))
+                        if (second_driven_gear_tipRadius > getTipRadius(5))
                         {
                             second_driven_gear_teethNum = getNumTeeth(second_driven_gear_tipRadius);
                             Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);

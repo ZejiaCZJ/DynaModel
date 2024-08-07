@@ -355,8 +355,6 @@ namespace DynaModel_v2.Light_Pipe
                         
 
                         List<Point3d> bestRoute1 = FindShortestPath(customized_part_center, pipeExit, customized_part, currModel, 1);
-                        foreach (var point in bestRoute1)
-                            myDoc.Objects.AddPoint(point);
                         #endregion
 
                         #region Determine which line is better by calculating the total angle of the route
@@ -770,7 +768,7 @@ namespace DynaModel_v2.Light_Pipe
 
                             if (voxelSpace[i, j, k].isTaken == false)
                             {
-                                if (currModel.ClosestPoint(currentPt).DistanceTo(currentPt) < maximumDistance)
+                                if (currModel.ClosestPoint(currentPt).DistanceTo(currentPt) < maximumDistance + 3)
                                 {
                                     voxelSpace[i, j, k].isTaken = true;
                                     continue;
@@ -1209,7 +1207,7 @@ namespace DynaModel_v2.Light_Pipe
                     isIntersected = false;
                     continue;
                 }
-                Brep[] pipe = Brep.CreatePipe(betterRoute, 2.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                Brep[] pipe = Brep.CreatePipe(betterRoute, 3.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 
                 //Check if the Pipe is intersecting with other breps
