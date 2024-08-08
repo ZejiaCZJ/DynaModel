@@ -426,29 +426,8 @@ namespace DynaModel_v2.Final_Stage
                 endEffector_rail = new Line(centroid, end_gear_dir, distance);
                 Curve endEffector_curve = endEffector_rail.ToNurbsCurve().Extend(CurveEnd.Start, CurveExtensionStyle.Line, new[] { endEffector_Hollowed });
 
-
-                //End Gear
-                Point3d end_gear_centerPoint = endEffector_rail.To;
-                Vector3d end_gear_Direction = new Vector3d(0, 0, 1);
-                Vector3d end_gear_xDir = new Vector3d(0, 0, 0);
-                int end_gear_teethNum = 15;
-                double end_gear_selfRotAngle = 0;
-                SpurGear end_gear = new SpurGear(end_gear_centerPoint, end_gear_Direction, end_gear_xDir, end_gear_teethNum, module, pressure_angle, thickness, end_gear_selfRotAngle, false);
-
-                //End Gear Gaksets
-                Point3d startPoint = new Point3d(end_gear.CenterPoint.X, end_gear.CenterPoint.Y, end_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
-                Point3d endPoint = new Point3d(end_gear.CenterPoint.X, end_gear.CenterPoint.Y, end_gear.Boundingbox.Min.Z - gasket_gear_gap);
-                Line end_gear_bottom_gasket_rail = new Line(startPoint, endPoint);
-                Brep end_gear_bottom_gasket = Brep.CreateThickPipe(end_gear_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-
-                startPoint.Z = end_gear.Boundingbox.Max.Z + top_gasket_gear_height;
-                endPoint.Z = end_gear.Boundingbox.Max.Z + gasket_gear_gap;
-                Line end_gear_top_gasket_rail = new Line(startPoint, endPoint);
-                Brep end_gear_top_gasket = Brep.CreateThickPipe(end_gear_top_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-
-
                 //Connector Gear
-                Point3d connector_gear_centerPoint = new Point3d(end_gear_centerPoint.X, end_gear_centerPoint.Y, start_gear_centerPoint.Z);
+                Point3d connector_gear_centerPoint = new Point3d(endEffector_curve.PointAtStart.X, endEffector_curve.PointAtStart.Y, start_gear_centerPoint.Z);
                 Vector3d connector_gear_Direction = new Vector3d(0, 0, 1);
                 Vector3d connector_gear_xDir = new Vector3d(0, 0, 0);
                 int connector_gear_teethNum = (int)(start_gear_teethNum * ratio);
@@ -456,8 +435,8 @@ namespace DynaModel_v2.Final_Stage
                 SpurGear connector_gear = new SpurGear(connector_gear_centerPoint, connector_gear_Direction, connector_gear_xDir, connector_gear_teethNum, module, pressure_angle, thickness, connector_gear_selfRotAngle, false);
 
                 //Connect Gear Gaksets
-                startPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
-                endPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - gasket_gear_gap);
+                Point3d startPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - bottom_gasket_gear_height);
+                Point3d endPoint = new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z - gasket_gear_gap);
                 Line connector_gear_bottom_gasket_rail = new Line(startPoint, endPoint);
                 Brep connector_gear_bottom_gasket = Brep.CreateThickPipe(connector_gear_bottom_gasket_rail.ToNurbsCurve(), gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
@@ -497,19 +476,14 @@ namespace DynaModel_v2.Final_Stage
                 {
                     myDoc.Objects.Add(start_gear.Model);
                     myDoc.Objects.Add(shaft);
-                    myDoc.Objects.Add(end_gear.Model);
                     myDoc.Objects.Add(connector_gear.Model);
 
 
-                    gaskets_guid.Add(myDoc.Objects.Add(end_gear_bottom_gasket));
-                    gaskets_guid.Add(myDoc.Objects.Add(end_gear_top_gasket));
                     gaskets_guid.Add(myDoc.Objects.Add(connector_gear_bottom_gasket));
                     gaskets_guid.Add(myDoc.Objects.Add(connector_gear_top_gasket));
 
                     //Create holes on gaskets to allow more water flow
                     List<Curve> rails = new List<Curve>();
-                    rails.Add(end_gear_bottom_gasket_rail.ToNurbsCurve());
-                    rails.Add(end_gear_top_gasket_rail.ToNurbsCurve());
                     rails.Add(connector_gear_bottom_gasket_rail.ToNurbsCurve());
                     rails.Add(connector_gear_top_gasket_rail.ToNurbsCurve());
 
@@ -643,19 +617,14 @@ namespace DynaModel_v2.Final_Stage
 
                     myDoc.Objects.Add(start_gear.Model);
                     myDoc.Objects.Add(shaft);
-                    myDoc.Objects.Add(end_gear.Model);
                     myDoc.Objects.Add(connector_gear.Model);
                     myDoc.Objects.Add(second_driven_gear.Model);
 
-                    gaskets_guid.Add(myDoc.Objects.Add(end_gear_bottom_gasket));
-                    gaskets_guid.Add(myDoc.Objects.Add(end_gear_top_gasket));
                     gaskets_guid.Add(myDoc.Objects.Add(connector_gear_bottom_gasket));
                     gaskets_guid.Add(myDoc.Objects.Add(connector_gear_top_gasket));
 
                     //Create holes on gaskets to allow more water flow
                     List<Curve> rails = new List<Curve>();
-                    rails.Add(end_gear_bottom_gasket_rail.ToNurbsCurve());
-                    rails.Add(end_gear_top_gasket_rail.ToNurbsCurve());
                     rails.Add(connector_gear_bottom_gasket_rail.ToNurbsCurve());
                     rails.Add(connector_gear_top_gasket_rail.ToNurbsCurve());
 

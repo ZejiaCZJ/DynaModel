@@ -398,21 +398,10 @@ namespace DynaModel_v2.Rotational_Motion
                         myDoc.Objects.Add(endEffector_rail.ToNurbsCurve());
                         
 
-                        //End Gear
-                        Point3d end_gear_centerPoint = endEffector_rail.To;
-                        Vector3d end_gear_Direction = new Vector3d(0, 0, 1);
-                        Vector3d end_gear_xDir = new Vector3d(0, 0, 0);
-                        int end_gear_teethNum = 15;
-                        double end_gear_selfRotAngle = 0;
-                        SpurGear end_gear = new SpurGear(end_gear_centerPoint, end_gear_Direction, end_gear_xDir, end_gear_teethNum, module, pressure_angle, thickness, end_gear_selfRotAngle, false);
-
-                        //Shaft between end gear and end effector
-                        endEffector_rail.Extend(0, thickness);
-                        Brep end_gear_shaft = Brep.CreatePipe(endEffector_rail.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-
+                        
 
                         //Connector Gear
-                        Point3d connector_gear_centerPoint = new Point3d(end_gear_centerPoint.X, end_gear_centerPoint.Y, start_gear_centerPoint.Z);
+                        Point3d connector_gear_centerPoint = new Point3d(centroid.X, centroid.Y, start_gear_centerPoint.Z);
                         Vector3d connector_gear_Direction = new Vector3d(0, 0, 1);
                         Vector3d connector_gear_xDir = new Vector3d(0, 0, 0);
                         int connector_gear_teethNum = (int)(start_gear_teethNum * ratio);
@@ -420,7 +409,7 @@ namespace DynaModel_v2.Rotational_Motion
                         SpurGear connector_gear = new SpurGear(connector_gear_centerPoint, connector_gear_Direction, connector_gear_xDir, connector_gear_teethNum, module, pressure_angle, thickness, connector_gear_selfRotAngle, false);
 
                         //Shaft between end gear and connector gear
-                        Line shaft_rail = new Line(new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, end_gear.Boundingbox.Max.Z), new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
+                        Line shaft_rail = new Line(centroid, new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Boundingbox.Min.Z));
                         shaft_rail.Extend(1, 1);
                         Brep shaft = Brep.CreatePipe(shaft_rail.ToNurbsCurve(), 1.5, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
@@ -451,8 +440,6 @@ namespace DynaModel_v2.Rotational_Motion
                         {
                             myDoc.Objects.Add(start_gear.Model);
                             myDoc.Objects.Add(shaft);
-                            myDoc.Objects.Add(end_gear.Model);
-                            myDoc.Objects.Add(end_gear_shaft);
                             myDoc.Objects.Add(connector_gear.Model);
                         }
                         else
@@ -508,8 +495,6 @@ namespace DynaModel_v2.Rotational_Motion
 
                             myDoc.Objects.Add(start_gear.Model);
                             myDoc.Objects.Add(shaft);
-                            myDoc.Objects.Add(end_gear.Model);
-                            myDoc.Objects.Add(end_gear_shaft);
                             myDoc.Objects.Add(connector_gear.Model);
                             myDoc.Objects.Add(second_driven_gear.Model);
                         }
