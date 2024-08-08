@@ -170,7 +170,7 @@ namespace DynaModel_v2.Touch
                     #endregion
 
                     #region Ask the user to select point to generate the area of the parameter
-                    var getSelectedPts = RhinoGet.GetOneObject("Please select points for a pipe exit, press ENTER when finished", false, ObjectType.Point, out ObjRef pointRef);
+                    var getSelectedPts = RhinoGet.GetOneObject("Please select points for a touch parameter, press ENTER when finished", false, ObjectType.Point, out ObjRef pointRef);
                     #endregion
 
                     if (getSelectedPts == Rhino.Commands.Result.Success)
@@ -202,7 +202,6 @@ namespace DynaModel_v2.Touch
                         Sphere customized_part_sphere = new Sphere(tempPt, 5);
                         Brep customized_part = customized_part_sphere.ToBrep();
                         Intersection.BrepBrep(currModel, customized_part, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPts);
-                        Curve customized_part_curve = intersectionCurves[0];
 
                         //Create a straight route from the base center to the selected point
                         Point3d customized_part_center = tempPt;

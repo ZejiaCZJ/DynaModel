@@ -395,11 +395,6 @@ namespace DynaModel_v2.Rotational_Motion
                         distance = centroid.DistanceTo(new Point3d(mainModel.GetBoundingBox(true).Center.X, mainModel.GetBoundingBox(true).Center.Y, mainModel.GetBoundingBox(true).Min.Z))/2;
                         endEffector_rail = new Line(centroid, end_gear_dir, distance);
 
-                        myDoc.Objects.Add(endEffector_rail.ToNurbsCurve());
-                        
-
-                        
-
                         //Connector Gear
                         Point3d connector_gear_centerPoint = new Point3d(centroid.X, centroid.Y, start_gear_centerPoint.Z);
                         Vector3d connector_gear_Direction = new Vector3d(0, 0, 1);

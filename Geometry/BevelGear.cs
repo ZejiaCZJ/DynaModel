@@ -389,7 +389,16 @@ namespace DynaModel_v2.Geometry
             faces.AddRange(toothFace);
             faces.Add(gearBottomFace);
 
-            model = Brep.CreateSolid(faces, mydoc.ModelAbsoluteTolerance)[0];
+            
+            Brep[] models = Brep.CreateSolid(faces, mydoc.ModelAbsoluteTolerance);
+            if(models != null && models.Length > 0)
+                model = models[0];
+            else
+            {
+                RhinoApp.WriteLine("Unable to create a gear given the provided information");
+                return;
+            }
+
 
             //Cut the model into the shape we want
             BoundingBox boundingBox = model.GetBoundingBox(true);

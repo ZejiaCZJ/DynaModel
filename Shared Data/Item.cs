@@ -28,6 +28,8 @@ namespace DynaModel_v2.SharedData
 
         public Curve Button_Spring_Circle { get; set; }
 
+        public Vector3d Normal { get; set; }
+
         public Item()
         {
             Name = string.Empty;
