@@ -1496,6 +1496,7 @@ namespace DynaModel_v2.Final_Stage
                 //Find the Pipe exit location
                 if (pipeExit.location == null)
                 {
+                    List<PipeExit> candidatePipeExit = new List<PipeExit>();
                     if (ledPipeExitPts.Count == 0)
                     {
                         GetLightPipeExits(currModel);
@@ -1507,16 +1508,28 @@ namespace DynaModel_v2.Final_Stage
                     {
                         if (item.isTaken == false && item.location.isTaken == false)
                         {
-                            pipeExit = item;
-                            item.isTaken = true;
                             allTaken = false;
-                            break;
+                            candidatePipeExit.Add(item);
                         }
                     }
                     if (allTaken)
                     {
                         RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore LED light parameters");
                         return false;
+                    }
+                    else
+                    {
+                        double minDistance = double.MaxValue;
+                        pipeExit = candidatePipeExit.FirstOrDefault();
+                        foreach(var item in candidatePipeExit)
+                        {
+                            if(item.actualLocation.DistanceTo(customized_part_center) < minDistance)
+                            {
+                                minDistance = item.actualLocation.DistanceTo(customized_part_center);
+                                pipeExit = item;
+                            }
+                        }
+                        pipeExit.isTaken = true;
                     }
                 }
 
@@ -1567,8 +1580,9 @@ namespace DynaModel_v2.Final_Stage
                 Circle pipeStartEdge = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, 3.2);
                 Circle actual_pipeStartCircle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3.2);
 
+                bool valid = false;
                 //Generate the soluable pipe that perfectly match the light source from the foundation
-                if (pipeStartEdge.IsValid)
+                while (pipeStartEdge.IsValid && !valid)
                 {
                     Curve curve1 = actual_pipeStartCircle.ToNurbsCurve();
                     Curve curve2 = pipeStartEdge.ToNurbsCurve();
@@ -1605,7 +1619,25 @@ namespace DynaModel_v2.Final_Stage
                             Brep soluableExtension_Cutter = loftBreps[0];
                             soluableExtension_Cutter = soluableExtension_Cutter.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
                             Brep[] soluableExtensions = Brep.CreateBooleanDifference(soluableExtension_Cutter, soluableExtension, myDoc.ModelAbsoluteTolerance);
-                            soluableExtension = soluableExtensions[0];
+                            if(soluableExtensions != null && soluableExtensions.Length > 0)
+                            {
+                                soluableExtension = soluableExtensions[0];
+                                valid = true;
+                            }
+                            else
+                            {
+                                soluablePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 5);
+
+                                soluablePipe = Brep.CreatePipe(soluablePipeRoute, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                                conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 3, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+
+
+                                //BrepEdge of the start of the soluablePipe
+                                tangent = soluablePipeRoute.TangentAtStart;
+                                pipeStartEdge = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, 3.2);
+                                actual_pipeStartCircle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3.2);
+                                continue;
+                            }
                         }
 
                         Guid a = myDoc.Objects.Add(soluableExtension);
@@ -1615,6 +1647,10 @@ namespace DynaModel_v2.Final_Stage
                         led_pipes_guid.Add(a);
                     }
                 }
+
+
+
+
 
                 Guid conductivePipeGuid = myDoc.Objects.Add(conductivePipe[0], redAttribute);
                 specialPipes.Add(conductivePipeGuid);
@@ -1667,7 +1703,7 @@ namespace DynaModel_v2.Final_Stage
                         }
                         Brep[] breps = Brep.CreateBooleanDifference(currModel_Hollowed, lightGuidPipe, myDoc.ModelAbsoluteTolerance);
                         if (breps != null && breps.Length > 0)
-                            currModel_Hollowed = Brep.CreateBooleanDifference(currModel_Hollowed, lightGuidPipe, myDoc.ModelAbsoluteTolerance)[0];
+                            GetSimilarVolumeBrep(breps, currModel_Hollowed, out currModel_Hollowed);
                         specialPipes.Add(a);
                         ignorePipesGuid.Add(a);
                         //led_pipes.Add(lightGuidPipe);
@@ -1714,21 +1750,34 @@ namespace DynaModel_v2.Final_Stage
                     GetConductivePipeExits(currModel);
                 }
 
+                List<PipeExit> candidatePipeExit = new List<PipeExit>();
                 bool allTaken = true;
                 foreach (var item in conductivePipeExitPts)
                 {
                     if (item.isTaken == false && item.location.isTaken == false)
                     {
-                        pipeExit = item;
-                        item.isTaken = true;
+                        candidatePipeExit.Add(item);
                         allTaken = false;
-                        break;
                     }
                 }
                 if (allTaken)
                 {
                     RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore Touch parameters");
                     return false;
+                }
+                else
+                {
+                    double minDistance = double.MaxValue;
+                    pipeExit = candidatePipeExit.FirstOrDefault();
+                    foreach (var item in candidatePipeExit)
+                    {
+                        if (item.actualLocation.DistanceTo(end_point) < minDistance)
+                        {
+                            minDistance = item.actualLocation.DistanceTo(end_point);
+                            pipeExit = item;
+                        }
+                    }
+                    pipeExit.isTaken = true;
                 }
             }
 
@@ -1755,15 +1804,15 @@ namespace DynaModel_v2.Final_Stage
 
             Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance);
             if (difference != null && difference.Length > 0)
-                currModel_Hollowed = difference[0];
+                GetSimilarVolumeBrep(difference, currModel_Hollowed, out currModel_Hollowed);
 
             difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
             if (difference != null && difference.Length > 0)
-                conductive_pipe = difference[0];
+                GetSimilarVolumeBrep(difference, conductive_pipe, out conductive_pipe);
 
             difference = Brep.CreateBooleanDifference(new[] { customized_part_extension }, new[] { currModel_Hollowed, customized_part }, myDoc.ModelAbsoluteTolerance);
             if (difference != null && difference.Length > 0)
-                customized_part_extension = difference[0];
+                GetSimilarVolumeBrep(difference, customized_part_extension, out customized_part_extension);
 
             Guid source_extension_guid = myDoc.Objects.Add(source_extension);
             Guid customized_part_extension_guid = myDoc.Objects.Add(customized_part_extension);
@@ -1786,11 +1835,6 @@ namespace DynaModel_v2.Final_Stage
 
 
             myDoc.Objects.Hide(currModelObjId, true);
-
-            //Brep[] differences = Brep.CreateBooleanDifference(currModel_Hollowed, touch, myDoc.ModelAbsoluteTolerance);
-            //currModel_Hollowed = differences[0];
-
-
             return true;
         }
 
@@ -1821,21 +1865,34 @@ namespace DynaModel_v2.Final_Stage
                         GetConductivePipeExits(currModel);
                     }
 
+                    List<PipeExit> candidatePipeExit = new List<PipeExit>();
                     bool allTaken = true;
                     foreach (var item in conductivePipeExitPts)
                     {
                         if (item.isTaken == false && item.location.isTaken == false)
                         {
-                            pipeExit = item;
-                            item.isTaken = true;
+                            candidatePipeExit.Add(item);
                             allTaken = false;
-                            break;
                         }
                     }
                     if (allTaken)
                     {
                         RhinoApp.WriteLine("All pipe exits are taken, or covered. Unable to create anymore Button parameters");
                         return false;
+                    }
+                    else
+                    {
+                        double minDistance = double.MaxValue;
+                        pipeExit = candidatePipeExit.FirstOrDefault();
+                        foreach (var item in candidatePipeExit)
+                        {
+                            if (item.actualLocation.DistanceTo(end_point) < minDistance)
+                            {
+                                minDistance = item.actualLocation.DistanceTo(end_point);
+                                pipeExit = item;
+                            }
+                        }
+                        pipeExit.isTaken = true;
                     }
                 }
                 Point3d customized_part_center;
@@ -1871,6 +1928,20 @@ namespace DynaModel_v2.Final_Stage
                 source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
                 spring_extension = spring_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
 
+                if (differences != null && differences.Length > 0)
+                {
+                    GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                }
+
+                differences = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (differences != null && differences.Length > 0)
+                    GetSimilarVolumeBrep(differences, conductive_pipe, out conductive_pipe);
+
+                differences = Brep.CreateBooleanDifference(spring_extension, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (differences != null && differences.Length > 0)
+                    GetSimilarVolumeBrep(differences, spring_extension, out spring_extension);
+
+
                 Guid conductive_pipe_guid = myDoc.Objects.Add(conductive_pipe);
                 Guid source_extension_guid = myDoc.Objects.Add(source_extension);
                 Guid spring_extension_guid = myDoc.Objects.Add(spring_extension);
@@ -1888,12 +1959,14 @@ namespace DynaModel_v2.Final_Stage
                 conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_part));
                 conductive_pipes.Add(spring_part);
                 conductive_pipes_guid.Add(myDoc.Objects.Add(spring_part));
-                currModel_Hollowed = differences[0];
+
+
+                
                 differences = Brep.CreateBooleanDifference(currModel_Hollowed, spring_extension, myDoc.ModelAbsoluteTolerance);
 
                 if (differences != null && differences.Length > 0)
                 {
-                    currModel_Hollowed = differences[0];
+                    GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
                 }
 
                 myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
@@ -1926,10 +1999,10 @@ namespace DynaModel_v2.Final_Stage
             //Right lower corner of the PCB
             Point3d rightLowerCorner = new Point3d(pcb_origin.X + 39, pcb_origin.Y + 11, pcb_origin.Z);
 
-            Index lu = FindClosestPointIndex(leftUpperCorner, currModel);
-            Index ru = FindClosestPointIndex(rightUpperCorner, currModel);
-            Index ll = FindClosestPointIndex(leftLowerCorner, currModel);
-            Index rl = FindClosestPointIndex(rightLowerCorner, currModel);
+            Index lu = FindClosestPointIndex(leftUpperCorner, currModel, "accurate");
+            Index ru = FindClosestPointIndex(rightUpperCorner, currModel, "accurate");
+            Index ll = FindClosestPointIndex(leftLowerCorner, currModel, "accurate");
+            Index rl = FindClosestPointIndex(rightLowerCorner, currModel, "accurate");
 
             List<Voxel> voxels = new List<Voxel>();
             voxels.Add(voxelSpace[lu.i, lu.j, lu.k]);
@@ -2173,6 +2246,10 @@ namespace DynaModel_v2.Final_Stage
 
                     }
                 }
+                BoundingBox foundation_box = foundation.GetBoundingBox(true);
+                foundation_box.Inflate(0, 0, -7);
+                normalObjects_BrepBox.Add(foundation_box);
+                //myDoc.Objects.Add(foundation_box.ToBrep());
                 //foreach (var box in normalObjects_BrepBox)
                 //    myDoc.Objects.Add(box.ToBrep());
 
@@ -2354,10 +2431,10 @@ namespace DynaModel_v2.Final_Stage
             //Right lower corner of the PCB
             Point3d rightLowerCorner = new Point3d(pcb_origin.X + 44.5, pcb_origin.Y + 6.5, pcb_origin.Z);
 
-            Index lu = FindClosestPointIndex(leftUpperCorner, currModel);
-            Index ru = FindClosestPointIndex(rightUpperCorner, currModel);
-            Index ll = FindClosestPointIndex(leftLowerCorner, currModel);
-            Index rl = FindClosestPointIndex(rightLowerCorner, currModel);
+            Index lu = FindClosestPointIndex(leftUpperCorner, currModel, "accurate");
+            Index ru = FindClosestPointIndex(rightUpperCorner, currModel, "accurate");
+            Index ll = FindClosestPointIndex(leftLowerCorner, currModel, "accurate");
+            Index rl = FindClosestPointIndex(rightLowerCorner, currModel, "accurate");
 
             List<Voxel> voxels = new List<Voxel>();
             voxels.Add(voxelSpace[lu.i, lu.j, lu.k]);
@@ -2559,41 +2636,108 @@ namespace DynaModel_v2.Final_Stage
         /// <param name="point">A point that needs to be estimated</param>
         /// <param name="currModel">current model that the user wants to add pipe into</param>
         /// <returns>the estimated index in the 3D grid of the current model</returns>
-        private Index FindClosestPointIndex(Point3d point, Brep currModel)
+        private Index FindClosestPointIndex(Point3d point, Brep currModel, string mode = null)
         {
             Index index = new Index();
 
-            //Calculate the approximate index of Point3d. Then obtain the precise index that has the smallest distance within the 2*2*2 bounding box of the Point3d
-            BoundingBox boundingBox = currModel.GetBoundingBox(true);
-
-            #region Calculate an estimated index
-            int estimated_i = (int)Math.Abs((point.X - boundingBox.Min.X) / 2);
-            int estimated_j = (int)Math.Abs((point.Y - boundingBox.Min.Y) / 2);
-            int estimated_k = (int)Math.Abs((point.Z - boundingBox.Min.Z) / 2);
-
-            if (estimated_i >= voxelSpace.GetLength(0))
-                estimated_i = voxelSpace.GetLength(0) - 1;
-            if (estimated_j >= voxelSpace.GetLength(1))
-                estimated_j = voxelSpace.GetLength(1) - 1;
-            if (estimated_k >= voxelSpace.GetLength(2))
-                estimated_k = voxelSpace.GetLength(2) - 1;
-            if (estimated_i < 0)
-                estimated_i = 0;
-            if (estimated_j < 0)
-                estimated_j = 0;
-            if (estimated_k < 0)
-                estimated_k = 0;
-            #endregion
-
-           
-            double smallestDistance = double.MaxValue;
-            index.i = estimated_i;
-            index.j = estimated_j;
-            index.k = estimated_k;
-            bool found = false;
-            #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
-            if (voxelSpace[estimated_i, estimated_j, estimated_k].isTaken)
+            if (mode == null)
             {
+                //Calculate the approximate index of Point3d. Then obtain the precise index that has the smallest distance within the 2*2*2 bounding box of the Point3d
+                BoundingBox boundingBox = currModel.GetBoundingBox(true);
+
+                #region Calculate an estimated index
+                int estimated_i = (int)Math.Abs((point.X - boundingBox.Min.X) / 2);
+                int estimated_j = (int)Math.Abs((point.Y - boundingBox.Min.Y) / 2);
+                int estimated_k = (int)Math.Abs((point.Z - boundingBox.Min.Z) / 2);
+
+                if (estimated_i >= voxelSpace.GetLength(0))
+                    estimated_i = voxelSpace.GetLength(0) - 1;
+                if (estimated_j >= voxelSpace.GetLength(1))
+                    estimated_j = voxelSpace.GetLength(1) - 1;
+                if (estimated_k >= voxelSpace.GetLength(2))
+                    estimated_k = voxelSpace.GetLength(2) - 1;
+                if (estimated_i < 0)
+                    estimated_i = 0;
+                if (estimated_j < 0)
+                    estimated_j = 0;
+                if (estimated_k < 0)
+                    estimated_k = 0;
+                #endregion
+
+
+                double smallestDistance = double.MaxValue;
+                index.i = estimated_i;
+                index.j = estimated_j;
+                index.k = estimated_k;
+                bool found = false;
+
+                #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
+                if (voxelSpace[estimated_i, estimated_j, estimated_k].isTaken)
+                {
+                    for (int i = estimated_i - 8; i < estimated_i + 9; i++)
+                    {
+                        for (int j = estimated_j - 8; j < estimated_j + 9; j++)
+                        {
+                            for (int k = estimated_k - 8; k < estimated_k + 9; k++)
+                            {
+                                if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
+                                {
+                                    double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
+
+                                    if (voxelSpace[i, j, k].isTaken == false && distance < smallestDistance)
+                                    {
+                                        smallestDistance = distance;
+                                        index.i = i;
+                                        index.j = j;
+                                        index.k = k;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (found == true)
+                                    break;
+                            }
+                            if (found == true)
+                                break;
+                        }
+                        if (found == true)
+                            break;
+                    }
+                }
+                #endregion
+            }
+
+            else
+            {
+                //Calculate the approximate index of Point3d. Then obtain the precise index that has the smallest distance within the 2*2*2 bounding box of the Point3d
+                BoundingBox boundingBox = currModel.GetBoundingBox(true);
+
+                #region Calculate an estimated index
+                int estimated_i = (int)Math.Abs((point.X - boundingBox.Min.X) / 2);
+                int estimated_j = (int)Math.Abs((point.Y - boundingBox.Min.Y) / 2);
+                int estimated_k = (int)Math.Abs((point.Z - boundingBox.Min.Z) / 2);
+
+                if (estimated_i >= voxelSpace.GetLength(0))
+                    estimated_i = voxelSpace.GetLength(0) - 1;
+                if (estimated_j >= voxelSpace.GetLength(1))
+                    estimated_j = voxelSpace.GetLength(1) - 1;
+                if (estimated_k >= voxelSpace.GetLength(2))
+                    estimated_k = voxelSpace.GetLength(2) - 1;
+                if (estimated_i < 0)
+                    estimated_i = 0;
+                if (estimated_j < 0)
+                    estimated_j = 0;
+                if (estimated_k < 0)
+                    estimated_k = 0;
+                #endregion
+
+
+                double smallestDistance = double.MaxValue;
+                index.i = estimated_i;
+                index.j = estimated_j;
+                index.k = estimated_k;
+
+                #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
                 for (int i = estimated_i - 8; i < estimated_i + 9; i++)
                 {
                     for (int j = estimated_j - 8; j < estimated_j + 9; j++)
@@ -2604,28 +2748,21 @@ namespace DynaModel_v2.Final_Stage
                             {
                                 double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
 
-                                if (voxelSpace[i, j, k].isTaken == false && distance < smallestDistance)
+                                if (distance < smallestDistance)
                                 {
                                     smallestDistance = distance;
                                     index.i = i;
                                     index.j = j;
                                     index.k = k;
-                                    found = true;
-                                    break;
                                 }
                             }
-                            if (found == true)
-                                break;
                         }
-                        if(found == true)
-                            break;
                     }
-                    if (found == true)
-                        break;
                 }
+                #endregion
             }
-            
-            #endregion
+
+
 
             return index;
         }
@@ -2918,6 +3055,44 @@ namespace DynaModel_v2.Final_Stage
             #endregion
         }
 
+        private bool GetMaxVolumeBrep(IEnumerable<Brep> breps, out Brep brep)
+        {
+            brep = null;
+            double maxVolume = double.MinValue;
+            if (breps != null && breps.Count() > 0)
+            {
+                foreach (var b in breps)
+                {
+                    if (b.GetVolume() > maxVolume)
+                    {
+                        maxVolume = b.GetVolume();
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool GetSimilarVolumeBrep(IEnumerable<Brep> breps, Brep originalBrep, out Brep brep)
+        {
+            brep = null;
+            double minDifference = double.MaxValue;
+            double original_volume = originalBrep.GetVolume();
+            if (breps != null && breps.Count() > 0)
+            {
+                foreach (var b in breps)
+                {
+                    if (Math.Abs(original_volume - b.GetVolume()) < minDifference)
+                    {
+                        minDifference = Math.Abs(original_volume - b.GetVolume());
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
     }
 }
 

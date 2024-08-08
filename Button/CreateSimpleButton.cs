@@ -362,11 +362,11 @@ namespace DynaModel_v2.Button
 
                             Brep[] difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_hollowed, myDoc.ModelAbsoluteTolerance);
                             if(difference != null && difference.Length > 0)
-                                conductive_pipe = difference[0];
+                                GetSimilarVolumeBrep(difference, conductive_pipe, out conductive_pipe);
 
                             difference = Brep.CreateBooleanDifference(spring_extension, currModel_hollowed, myDoc.ModelAbsoluteTolerance);
                             if (difference != null && difference.Length > 0)
-                                spring_extension = difference[0];
+                                GetSimilarVolumeBrep(difference, spring_extension, out spring_extension);
 
                             myDoc.Objects.Add(conductive_pipe);
                             myDoc.Objects.Add(source_extension);
@@ -933,6 +933,44 @@ namespace DynaModel_v2.Button
             #endregion
         }
 
+        private bool GetMaxVolumeBrep(IEnumerable<Brep> breps, out Brep brep)
+        {
+            brep = null;
+            double maxVolume = double.MinValue;
+            if (breps != null && breps.Count() > 0)
+            {
+                foreach (var b in breps)
+                {
+                    if (b.GetVolume() > maxVolume)
+                    {
+                        maxVolume = b.GetVolume();
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool GetSimilarVolumeBrep(IEnumerable<Brep> breps, Brep originalBrep, out Brep brep)
+        {
+            brep = null;
+            double minDifference = double.MaxValue;
+            double original_volume = originalBrep.GetVolume();
+            if (breps != null && breps.Count() > 0)
+            {
+                foreach (var b in breps)
+                {
+                    if (Math.Abs(original_volume - b.GetVolume()) < minDifference)
+                    {
+                        minDifference = Math.Abs(original_volume - b.GetVolume());
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// Provides an Icon for the component.

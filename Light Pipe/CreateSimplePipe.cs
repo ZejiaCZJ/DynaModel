@@ -1258,7 +1258,24 @@ namespace DynaModel_v2.Light_Pipe
             #endregion
         }
 
-
+        private bool GetMaxVolumeBrep(IEnumerable<Brep> breps, out Brep brep)
+        {
+            brep = null;
+            double maxVolume = double.MinValue;
+            if (breps != null && breps.Count() > 0)
+            {
+                foreach (var b in breps)
+                {
+                    if (b.GetVolume() > maxVolume)
+                    {
+                        maxVolume = b.GetVolume();
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
 
 
         /// <summary>

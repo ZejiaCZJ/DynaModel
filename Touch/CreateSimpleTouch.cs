@@ -265,17 +265,20 @@ namespace DynaModel_v2.Touch
 
                         Brep[] difference = Brep.CreateBooleanDifference(currModel_hollowed, customized_part_sphere.ToBrep(), myDoc.ModelAbsoluteTolerance);
                         if (difference != null && difference.Length > 0)
-                            currModel_hollowed = difference[0];
+                        {
+                            GetSimilarVolumeBrep(difference, currModel_hollowed,out currModel_hollowed);
+                        }
 
                         difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_hollowed, myDoc.ModelAbsoluteTolerance);
                         if (difference != null && difference.Length > 0)
-                            conductive_pipe = difference[0];
+                            GetSimilarVolumeBrep(difference, conductive_pipe,out conductive_pipe);
 
 
                         difference = Brep.CreateBooleanDifference(new[] { customized_part_extension },new[] { currModel_hollowed, customized_part }, myDoc.ModelAbsoluteTolerance);
                         if (difference != null && difference.Length > 0)
-                            customized_part_extension = difference[0];
+                            GetSimilarVolumeBrep(difference, customized_part_extension, out customized_part_extension);
 
+                        myDoc.Objects.Add(currModel_hollowed);
                         myDoc.Objects.Add(customized_part_extension);
                         myDoc.Objects.Add(conductive_pipe);
                         myDoc.Objects.Add(source_extension);
@@ -833,6 +836,45 @@ namespace DynaModel_v2.Touch
             return interpolatedRoute_Point3d;
 
             #endregion
+        }
+
+        private bool GetMaxVolumeBrep(IEnumerable<Brep> breps, out Brep brep)
+        {
+            brep = null;
+            double maxVolume = double.MinValue;
+            if(breps != null && breps.Count() > 0)
+            {
+                foreach(var b in breps)
+                {
+                    if(b.GetVolume() > maxVolume)
+                    {
+                        maxVolume = b.GetVolume();
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool GetSimilarVolumeBrep(IEnumerable<Brep> breps, Brep originalBrep,out Brep brep)
+        {
+            brep = null;
+            double minDifference = double.MaxValue;
+            double original_volume = originalBrep.GetVolume();
+            if (breps != null && breps.Count() > 0)
+            {
+                foreach (var b in breps)
+                {
+                    if (Math.Abs(original_volume - b.GetVolume()) < minDifference)
+                    {
+                        minDifference = Math.Abs(original_volume - b.GetVolume());
+                        brep = b;
+                    }
+                }
+                return true;
+            }
+            return false;
         }
 
 
