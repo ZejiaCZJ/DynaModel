@@ -135,21 +135,14 @@ namespace DynaModel_v2.Touch
                         Plane plane = new Plane(Origin, xPoint, yPoint);
                         PlaneSurface planeSurface = PlaneSurface.CreateThroughBox(plane, boundingBox);
 
-                        Intersection.BrepSurface(currModel_hollowed, planeSurface, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints);
+                        Intersection.BrepSurface(currModel, planeSurface, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out Point3d[] intersectionPoints);
 
                         //Create Points on the Curve
                         if (intersectionCurves != null)
                         {
                             if (intersectionCurves.Length != 0)
                             {
-                                Line line = new Line(new Point3d(0, 0, 0), new Point3d(0, 0, 1));
-                                Curve curve = line.ToNurbsCurve();
-                                foreach (Curve c in intersectionCurves)
-                                {
-                                    if (c.GetLength() > curve.GetLength())
-                                        curve = c;
-                                }
-                                if (!curve.Equals(line.ToNurbsCurve()))
+                                foreach (Curve curve in intersectionCurves)
                                 {
                                     Double[] curveParams = curve.DivideByLength(2, true, out Point3d[] points);
                                     if (curveParams != null && curveParams.Length > 0)

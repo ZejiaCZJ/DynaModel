@@ -1310,10 +1310,10 @@ namespace DynaModel_v2.Final_Stage
             myDoc.Objects.Delete(cutterObjId, true);
             myDoc.Objects.Delete(endEffectorObjId, true);
             myDoc.Views.Redraw();
+            myDoc.Objects.Hide(currModelObjId, true);
 
-            
 
-            
+
 
             return true;
         }
@@ -1348,13 +1348,14 @@ namespace DynaModel_v2.Final_Stage
 
             if (goal.isTaken)
             {
-                RhinoApp.WriteLine("The air pipe exit is taken. Cannot generate air pipe!");
+                RhinoApp.WriteLine("The air pipe exit is blocked. Cannot generate air pipe!");
                 return false;
             }
 
             #region Find pipe path
             //Method 1: use A* directly
-            List<Point3d> bestRoute1 = FindShortestPath(tempPt, pipeExit, currModel, currModel, 2);
+            List<Point3d> bestRoute1 = FindShortestPath(tempPt, pipeExit, currModel, currModel, 1);
+
             Curve route = Curve.CreateInterpolatedCurve(bestRoute1, 1);
             route = route.Trim(CurveEnd.Both, route.GetLength() / 10);
 
@@ -1433,12 +1434,15 @@ namespace DynaModel_v2.Final_Stage
                 source_extension = solid[0];
             else
             {
+                RhinoApp.WriteLine("Failed to create an air pipe due to unavailability of air pipe source");
+                myDoc.Objects.Add(route);
                 Brep[] breps = new Brep[] { pipe_start_cap, source_inner_extension, source_outer_extension, source_cap };
                 foreach (var item in breps)
                     myDoc.Objects.Add(item);
                 Curve[] curves = new Curve[] { source_inner_circle, source_outer_circle, pipe_start_inner_circle, pipe_start_outer_circle };
                 foreach (var curve in curves)
                     myDoc.Objects.AddCurve(curve);
+                return false;
             }
             #endregion
 
@@ -1497,12 +1501,15 @@ namespace DynaModel_v2.Final_Stage
                 customized_part_extension = solid[0];
             else
             {
+                RhinoApp.WriteLine("Failed to create an air pipe due to the selected area is too complex to create an airpipe");
+                myDoc.Objects.Add(main_air_pipe);
                 Brep[] breps = new Brep[] { pipe_end_cap, customized_part_cap, customized_part_inner_extension, customized_part_outer_extension };
                 foreach (var item in breps)
                     myDoc.Objects.Add(item);
                 Curve[] curves = new Curve[] { pipe_end_inner_circle, pipe_end_outer_circle, customized_part_inner_circle, customized_part_outer_circle };
                 foreach (var curve in curves)
                     myDoc.Objects.AddCurve(curve);
+                return false;
             }
 
             
@@ -1516,6 +1523,8 @@ namespace DynaModel_v2.Final_Stage
             specialPipes.Add(a);
             led_pipes.Add(main_air_pipe);
             led_pipes_guid.Add(a);
+            Brep main_air_pipe_concrete = Brep.CreatePipe(route, 3.2, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            InViewObject conductiveObject = new InViewObject(main_air_pipe_concrete, a, "conductive pipe");
 
             a = myDoc.Objects.Add(source_extension);
             specialPipes.Add(a);
@@ -1533,6 +1542,12 @@ namespace DynaModel_v2.Final_Stage
             }
 
             myDoc.Objects.Hide(currModelObjId, true);
+
+            
+
+            combinableLightPipeRoute.Add(route.Trim(CurveEnd.Both, route.GetLength()/4));
+            combinableLightPipe.Add(main_air_pipe_concrete);
+            conductiveObjects.Add(conductiveObject);
 
             ////Method 2: use a portion of the lightPipe directly.
             //Curve bestStartRoute = bestRoute;
@@ -1764,7 +1779,8 @@ namespace DynaModel_v2.Final_Stage
                             }
                             else
                             {
-                                soluablePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 5);
+                                //The current generated light source pipe cannot be created, we cut the route more.
+                                soluablePipeRoute = soluablePipeRoute.Trim(CurveEnd.Start, 1);
 
                                 soluablePipe = Brep.CreatePipe(soluablePipeRoute, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                                 conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, 3, 3.2, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
@@ -1796,7 +1812,7 @@ namespace DynaModel_v2.Final_Stage
                 led_pipes_guid.Add(conductivePipeGuid);
                 InViewObject conductiveObject = new InViewObject(conductivePipe[0], conductivePipeGuid, "conductive pipe");
 
-                combinableLightPipeRoute.Add(bestRoute.Trim(CurveEnd.End, 7));
+                combinableLightPipeRoute.Add(soluablePipeRoute.Trim(CurveEnd.Both, 7));
                 combinableLightPipe.Add(soluablePipe[0]);
                 conductiveObjects.Add(conductiveObject);
 
@@ -1919,61 +1935,203 @@ namespace DynaModel_v2.Final_Stage
                 }
             }
 
+            string approach = "combine others";
+
+            //Method 1: Use the A* result directly
             List<Point3d> bestRoute1 = FindShortestPath(end_point, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 2);
-
             Curve bestRoute = Curve.CreateInterpolatedCurve(bestRoute1, 1);
-            bestRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 15);
-            Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-            Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
-            Curve pipe_start_circle = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3).ToNurbsCurve();
-            if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
-                pipe_start_circle.Reverse();
-            Point3d start = conductive_source_circle.PointAtStart;
-            pipe_start_circle.ClosestPoint(start, out double t);
-            pipe_start_circle.ChangeClosedCurveSeam(t);
-            Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
-            Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
-            Brep source_extension = loftBreps[0];
-            source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+            //Method 2: Use a air pipe or led pipe to be a part of the route
+            int closest_index = -1;
+            double closest_distance = double.MaxValue;
+            if(combinableLightPipeRoute.Count != 0)
+            {
+                for(int i = 0; i < combinableLightPipeRoute.Count; i++)
+                {
+                    double current_distance = combinableLightPipeRoute[i].PointAtStart.DistanceTo(pipeExit.actualLocation);
+                    if (current_distance < closest_distance)
+                    {
+                        closest_index = i;
+                        closest_distance = current_distance;
+                    }
+                }
+            }
 
-            Brep customized_part_extension = Brep.CreatePipe(new Line(bestRoute.PointAtEnd, end_point).ToNurbsCurve(), 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            List<Point3d> bestEndRoute_pts = new List<Point3d>();
+            List<Point3d> bestStartRoute_pts = new List<Point3d>();
+            Curve combinablePipeRoute = null;
+            if (closest_index >= 0)
+            {
+                ignorePipesGuid.Add(conductiveObjects[closest_index].guid);
+                voxelSpace = null;
+                GetVoxelSpace(currModel, 1, currModel);
+                combinablePipeRoute = combinableLightPipeRoute[closest_index];
+                Brep combinablePipe = combinableLightPipe[closest_index];
 
+                bestEndRoute_pts = FindShortestPath(end_point, combinablePipeRoute.PointAtEnd, currModel, currModel, 1);
 
-            Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance);
-            if (difference != null && difference.Length > 0)
-                GetSimilarVolumeBrep(difference, currModel_Hollowed, out currModel_Hollowed);
+                if (bestEndRoute_pts.Count == 0)
+                    approach = "A*";
 
-            difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
-            if (difference != null && difference.Length > 0)
-                GetSimilarVolumeBrep(difference, conductive_pipe, out conductive_pipe);
+                bestStartRoute_pts = FindShortestPath(combinablePipeRoute.PointAtStart, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 1);
+                if (bestStartRoute_pts.Count == 0)
+                    approach = "A*";
+            }
+            else
+            {
+                approach = "A*";
+            }
+            
 
-            difference = Brep.CreateBooleanDifference(new[] { customized_part_extension }, new[] { currModel_Hollowed, customized_part }, myDoc.ModelAbsoluteTolerance);
-            if (difference != null && difference.Length > 0)
-                GetSimilarVolumeBrep(difference, customized_part_extension, out customized_part_extension);
-
-            Guid source_extension_guid = myDoc.Objects.Add(source_extension);
-            Guid customized_part_extension_guid = myDoc.Objects.Add(customized_part_extension);
-            Guid conductive_pipe_guid = myDoc.Objects.Add(conductive_pipe);
-
-            specialPipes.Add(source_extension_guid);
-            specialPipes.Add(customized_part_extension_guid);
-            specialPipes.Add(conductive_pipe_guid);
-
-            conductive_pipes_guid.Add(source_extension_guid);
-            conductive_pipes_guid.Add(customized_part_extension_guid);
-            conductive_pipes_guid.Add(conductive_pipe_guid);
-
-            conductive_pipes.Add(source_extension);
-            conductive_pipes.Add(customized_part_extension);
-            conductive_pipes.Add(conductive_pipe);
-
-
-            myDoc.Objects.Add(customized_part);
+            Curve bestEndRoute = null;
+            Curve bestStartRoute = null;
 
 
-            myDoc.Objects.Hide(currModelObjId, true);
-            return true;
+            //Find the best approach
+            if(approach != "A*")
+            {
+                bestEndRoute = Curve.CreateInterpolatedCurve(bestEndRoute_pts, 1);
+                bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
+
+                //Compare between two methods, use the shorter one
+                if (bestEndRoute.GetLength() + bestStartRoute.GetLength() + combinablePipeRoute.GetLength() > bestRoute.GetLength() + double.MaxValue)
+                    approach = "A*";
+            }
+
+
+
+
+            if(approach == "A*")
+            {
+                bestRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 15);
+                Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
+                Curve pipe_start_circle = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3).ToNurbsCurve();
+                if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
+                    pipe_start_circle.Reverse();
+                Point3d start = conductive_source_circle.PointAtStart;
+                pipe_start_circle.ClosestPoint(start, out double t);
+                pipe_start_circle.ChangeClosedCurveSeam(t);
+                Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
+                Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                Brep source_extension = loftBreps[0];
+                source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                Brep customized_part_extension = Brep.CreatePipe(new Line(bestRoute.PointAtEnd, end_point).ToNurbsCurve(), 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+
+                Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, customized_part, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, currModel_Hollowed, out currModel_Hollowed);
+
+                difference = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, conductive_pipe, out conductive_pipe);
+
+                difference = Brep.CreateBooleanDifference(new[] { customized_part_extension }, new[] { currModel_Hollowed, customized_part }, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, customized_part_extension, out customized_part_extension);
+
+                Guid source_extension_guid = myDoc.Objects.Add(source_extension);
+                Guid customized_part_extension_guid = myDoc.Objects.Add(customized_part_extension);
+                Guid conductive_pipe_guid = myDoc.Objects.Add(conductive_pipe);
+
+                specialPipes.Add(source_extension_guid);
+                specialPipes.Add(customized_part_extension_guid);
+                specialPipes.Add(conductive_pipe_guid);
+
+                conductive_pipes_guid.Add(source_extension_guid);
+                conductive_pipes_guid.Add(customized_part_extension_guid);
+                conductive_pipes_guid.Add(conductive_pipe_guid);
+
+                conductive_pipes.Add(source_extension);
+                conductive_pipes.Add(customized_part_extension);
+                conductive_pipes.Add(conductive_pipe);
+
+
+                myDoc.Objects.Add(customized_part);
+
+
+                myDoc.Objects.Hide(currModelObjId, true);
+                return true;
+            }
+            else
+            {
+                //Using the second approach, it will create a pipe that made up of 5 parts: pipe source part --> front pipe part --> mid pipe part(already have) --> end pipe part --> customized part
+                bestStartRoute = bestStartRoute.Trim(CurveEnd.Start, bestStartRoute.GetLength() / 6);
+
+                //Generate the pipe source part
+                Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
+                Curve pipe_start_circle = new Circle(new Plane(bestStartRoute.PointAtStart, bestStartRoute.TangentAtStart), 3).ToNurbsCurve();
+
+                if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
+                    pipe_start_circle.Reverse();
+                Point3d start = conductive_source_circle.PointAtStart;
+                pipe_start_circle.ClosestPoint(start, out double t);
+                pipe_start_circle.ChangeClosedCurveSeam(t);
+                Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
+                Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                Brep source_extension = loftBreps[0];
+                source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                Brep[] difference = Brep.CreateBooleanDifference(source_extension, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, source_extension, out source_extension);
+
+                //Generate the front pipe
+                Brep front_pipe = Brep.CreatePipe(bestStartRoute, 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                difference = Brep.CreateBooleanDifference(front_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, front_pipe, out front_pipe);
+                difference = Brep.CreateBooleanDifference(front_pipe, conductiveObjects[closest_index].brep, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, front_pipe, out front_pipe);
+
+                //Generate the end pipe
+                Brep end_pipe = Brep.CreatePipe(bestEndRoute, 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                difference = Brep.CreateBooleanDifference(end_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, end_pipe, out end_pipe);
+                difference = Brep.CreateBooleanDifference(end_pipe, conductiveObjects[closest_index].brep, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, end_pipe, out end_pipe);
+
+                //Generate the customized part
+                Brep customized_part_extension = Brep.CreatePipe(new Line(bestEndRoute.PointAtEnd, end_point).ToNurbsCurve(), 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                difference = Brep.CreateBooleanDifference(customized_part_extension, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                if (difference != null && difference.Length > 0)
+                    GetSimilarVolumeBrep(difference, customized_part_extension, out customized_part_extension);
+
+                Guid source_extension_guid = myDoc.Objects.Add(source_extension);
+                Guid front_pipe_guid = myDoc.Objects.Add(front_pipe);
+                Guid end_pipe_guid = myDoc.Objects.Add(end_pipe);
+                Guid customized_part_extension_guid = myDoc.Objects.Add(customized_part_extension);
+                Guid customized_part_guid = myDoc.Objects.Add(customized_part);
+
+                specialPipes.Add(source_extension_guid);
+                specialPipes.Add(front_pipe_guid);
+                specialPipes.Add(end_pipe_guid);
+                specialPipes.Add(customized_part_extension_guid);
+
+                conductive_pipes_guid.Add(source_extension_guid);
+                conductive_pipes_guid.Add(front_pipe_guid);
+                conductive_pipes_guid.Add(end_pipe_guid);
+                conductive_pipes_guid.Add(customized_part_extension_guid);
+
+                conductive_pipes.Add(source_extension);
+                conductive_pipes.Add(front_pipe);
+                conductive_pipes.Add(end_pipe);
+                conductive_pipes.Add(customized_part_extension);
+
+                conductiveObjects.RemoveAt(closest_index);
+                combinableLightPipe.RemoveAt(closest_index);
+                combinableLightPipeRoute.RemoveAt(closest_index);
+
+                myDoc.Objects.Hide(currModelObjId, true);
+                return true;
+            }
+            
         }
 
         public bool GenerateButtonPipe(ref Item savedItem, out List<Brep> subtrahends)
@@ -2033,6 +2191,8 @@ namespace DynaModel_v2.Final_Stage
                         pipeExit.isTaken = true;
                     }
                 }
+
+                //Method 1: Use A* directly
                 Point3d customized_part_center;
                 spring_part_circle.TryGetCircle(out Circle circle);
 
@@ -2042,72 +2202,229 @@ namespace DynaModel_v2.Final_Stage
                 bestRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 15);
                 Brep conductive_pipe = Brep.CreatePipe(bestRoute, 3, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-                Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
-                Curve pipe_start_circle = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3).ToNurbsCurve();
-                if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
-                    pipe_start_circle.Reverse();
-                Point3d start = conductive_source_circle.PointAtStart;
-                pipe_start_circle.ClosestPoint(start, out double t);
-                pipe_start_circle.ChangeClosedCurveSeam(t);
-                Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
-                Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
-                Brep source_extension = loftBreps[0];
-
-                Curve pipe_end_circle = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3).ToNurbsCurve();
-                if (!Curve.DoDirectionsMatch(spring_part_circle, pipe_end_circle))
-                    pipe_start_circle.Reverse();
-                start = spring_part_circle.PointAtStart;
-                pipe_end_circle.ClosestPoint(start, out t);
-                pipe_end_circle.ChangeClosedCurveSeam(t);
-                crossSectionCurves = new Curve[] { spring_part_circle, pipe_end_circle };
-                loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
-                Brep spring_extension = loftBreps[0];
-
-                source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-                spring_extension = spring_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
-
-                if (differences != null && differences.Length > 0)
+                //Method 2: Use a air pipe or led pipe to be a part of the route
+                string approach = "combine others";
+                int closest_index = -1;
+                double closest_distance = double.MaxValue;
+                if (combinableLightPipeRoute.Count != 0)
                 {
-                    GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                    for (int i = 0; i < combinableLightPipeRoute.Count; i++)
+                    {
+                        double current_distance = combinableLightPipeRoute[i].PointAtStart.DistanceTo(pipeExit.actualLocation);
+                        if (current_distance < closest_distance)
+                        {
+                            closest_index = i;
+                            closest_distance = current_distance;
+                        }
+                    }
                 }
 
-                differences = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
-                if (differences != null && differences.Length > 0)
-                    GetSimilarVolumeBrep(differences, conductive_pipe, out conductive_pipe);
-
-                differences = Brep.CreateBooleanDifference(spring_extension, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
-                if (differences != null && differences.Length > 0)
-                    GetSimilarVolumeBrep(differences, spring_extension, out spring_extension);
-
-
-                Guid conductive_pipe_guid = myDoc.Objects.Add(conductive_pipe);
-                Guid source_extension_guid = myDoc.Objects.Add(source_extension);
-                Guid spring_extension_guid = myDoc.Objects.Add(spring_extension);
-
-                specialPipes.Add(conductive_pipe_guid);
-                specialPipes.Add(source_extension_guid);
-                specialPipes.Add(spring_extension_guid);
-
-                conductive_pipes_guid.Add(conductive_pipe_guid);
-                conductive_pipes_guid.Add(source_extension_guid);
-                conductive_pipes_guid.Add(spring_extension_guid);
-
-                myDoc.Objects.Hide(currModelObjId, true);
-                conductive_pipes.Add(conductive_part);
-                conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_part));
-                conductive_pipes.Add(spring_part);
-                conductive_pipes_guid.Add(myDoc.Objects.Add(spring_part));
-
-
-                
-                differences = Brep.CreateBooleanDifference(currModel_Hollowed, spring_extension, myDoc.ModelAbsoluteTolerance);
-
-                if (differences != null && differences.Length > 0)
+                List<Point3d> bestEndRoute_pts = new List<Point3d>();
+                List<Point3d> bestStartRoute_pts = new List<Point3d>();
+                Curve combinablePipeRoute = null;
+                if (closest_index >= 0)
                 {
-                    GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                    ignorePipesGuid.Add(conductiveObjects[closest_index].guid);
+                    voxelSpace = null;
+                    GetVoxelSpace(currModel, 1, currModel);
+                    combinablePipeRoute = combinableLightPipeRoute[closest_index];
+                    Brep combinablePipe = combinableLightPipe[closest_index];
+
+                    bestEndRoute_pts = FindShortestPath(end_point, combinablePipeRoute.PointAtEnd, currModel, currModel, 1);
+
+                    if (bestEndRoute_pts.Count == 0)
+                        approach = "A*";
+
+                    bestStartRoute_pts = FindShortestPath(combinablePipeRoute.PointAtStart, new Point3d(pipeExit.location.X, pipeExit.location.Y, pipeExit.location.Z), currModel, currModel, 1);
+                    if (bestStartRoute_pts.Count == 0)
+                        approach = "A*";
+                }
+                else
+                {
+                    approach = "A*";
                 }
 
-                myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
+
+                Curve bestEndRoute = null;
+                Curve bestStartRoute = null;
+
+
+                //Find the best approach
+                if (approach != "A*")
+                {
+                    bestEndRoute = Curve.CreateInterpolatedCurve(bestEndRoute_pts, 1);
+                    bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
+
+                    //Compare between two methods, use the shorter one
+                    if (bestEndRoute.GetLength() + bestStartRoute.GetLength() + combinablePipeRoute.GetLength() > bestRoute.GetLength() + double.MaxValue)
+                        approach = "A*";
+                }
+
+                if(approach == "A*")
+                {
+                    Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
+                    Curve pipe_start_circle = new Circle(new Plane(bestRoute.PointAtStart, bestRoute.TangentAtStart), 3).ToNurbsCurve();
+                    if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
+                        pipe_start_circle.Reverse();
+                    Point3d start = conductive_source_circle.PointAtStart;
+                    pipe_start_circle.ClosestPoint(start, out double t);
+                    pipe_start_circle.ChangeClosedCurveSeam(t);
+                    Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
+                    Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                    Brep source_extension = loftBreps[0];
+
+                    Curve pipe_end_circle = new Circle(new Plane(bestRoute.PointAtEnd, bestRoute.TangentAtEnd), 3).ToNurbsCurve();
+                    if (!Curve.DoDirectionsMatch(spring_part_circle, pipe_end_circle))
+                        pipe_start_circle.Reverse();
+                    start = spring_part_circle.PointAtStart;
+                    pipe_end_circle.ClosestPoint(start, out t);
+                    pipe_end_circle.ChangeClosedCurveSeam(t);
+                    crossSectionCurves = new Curve[] { spring_part_circle, pipe_end_circle };
+                    loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                    Brep spring_extension = loftBreps[0];
+
+                    source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+                    spring_extension = spring_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                    if (differences != null && differences.Length > 0)
+                    {
+                        GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                    }
+
+                    differences = Brep.CreateBooleanDifference(conductive_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                    if (differences != null && differences.Length > 0)
+                        GetSimilarVolumeBrep(differences, conductive_pipe, out conductive_pipe);
+
+                    differences = Brep.CreateBooleanDifference(spring_extension, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                    if (differences != null && differences.Length > 0)
+                        GetSimilarVolumeBrep(differences, spring_extension, out spring_extension);
+
+
+                    Guid conductive_pipe_guid = myDoc.Objects.Add(conductive_pipe);
+                    Guid source_extension_guid = myDoc.Objects.Add(source_extension);
+                    Guid spring_extension_guid = myDoc.Objects.Add(spring_extension);
+
+                    specialPipes.Add(conductive_pipe_guid);
+                    specialPipes.Add(source_extension_guid);
+                    specialPipes.Add(spring_extension_guid);
+
+                    conductive_pipes_guid.Add(conductive_pipe_guid);
+                    conductive_pipes_guid.Add(source_extension_guid);
+                    conductive_pipes_guid.Add(spring_extension_guid);
+
+                    myDoc.Objects.Hide(currModelObjId, true);
+                    conductive_pipes.Add(conductive_part);
+                    conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_part));
+                    conductive_pipes.Add(spring_part);
+                    conductive_pipes_guid.Add(myDoc.Objects.Add(spring_part));
+
+
+
+                    differences = Brep.CreateBooleanDifference(currModel_Hollowed, spring_extension, myDoc.ModelAbsoluteTolerance);
+
+                    if (differences != null && differences.Length > 0)
+                    {
+                        GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                    }
+
+                    myDoc.Objects.Delete(currModel_Hollowed_ObjId, true);
+                }
+                else
+                {
+                    //Using the second approach, it will create a pipe that made up of 5 parts: pipe source part --> front pipe part --> mid pipe part(already have) --> end pipe part --> customized part
+                    bestStartRoute = bestStartRoute.Trim(CurveEnd.Start, bestStartRoute.GetLength() / 6);
+
+
+                    //Generate the pipe source part
+                    Curve conductive_source_circle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), 3).ToNurbsCurve();
+                    Curve pipe_start_circle = new Circle(new Plane(bestStartRoute.PointAtStart, bestStartRoute.TangentAtStart), 3).ToNurbsCurve();
+
+                    if (!Curve.DoDirectionsMatch(conductive_source_circle, pipe_start_circle))
+                        pipe_start_circle.Reverse();
+                    Point3d start = conductive_source_circle.PointAtStart;
+                    pipe_start_circle.ClosestPoint(start, out double t);
+                    pipe_start_circle.ChangeClosedCurveSeam(t);
+                    Curve[] crossSectionCurves = new Curve[] { conductive_source_circle, pipe_start_circle };
+                    Brep[] loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                    Brep source_extension = loftBreps[0];
+                    source_extension = source_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                    Brep[] difference = Brep.CreateBooleanDifference(source_extension, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                    if (difference != null && difference.Length > 0)
+                        GetSimilarVolumeBrep(difference, source_extension, out source_extension);
+
+                    //Generate the front pipe
+                    Brep front_pipe = Brep.CreatePipe(bestStartRoute, 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    difference = Brep.CreateBooleanDifference(front_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                    if (difference != null && difference.Length > 0)
+                        GetSimilarVolumeBrep(difference, front_pipe, out front_pipe);
+                    difference = Brep.CreateBooleanDifference(front_pipe, conductiveObjects[closest_index].brep, myDoc.ModelAbsoluteTolerance);
+                    if (difference != null && difference.Length > 0)
+                        GetSimilarVolumeBrep(difference, front_pipe, out front_pipe);
+
+                    //Generate the end pipe
+                    Brep end_pipe = Brep.CreatePipe(bestEndRoute, 3, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    difference = Brep.CreateBooleanDifference(end_pipe, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
+                    if (difference != null && difference.Length > 0)
+                        GetSimilarVolumeBrep(difference, end_pipe, out end_pipe);
+                    difference = Brep.CreateBooleanDifference(end_pipe, conductiveObjects[closest_index].brep, myDoc.ModelAbsoluteTolerance);
+                    if (difference != null && difference.Length > 0)
+                        GetSimilarVolumeBrep(difference, end_pipe, out end_pipe);
+
+                    //Generate the customized part
+                    Curve pipe_end_circle = new Circle(new Plane(bestEndRoute.PointAtEnd, bestEndRoute.TangentAtEnd), 3).ToNurbsCurve();
+                    if (!Curve.DoDirectionsMatch(spring_part_circle, pipe_end_circle))
+                        pipe_start_circle.Reverse();
+                    start = spring_part_circle.PointAtStart;
+                    pipe_end_circle.ClosestPoint(start, out t);
+                    pipe_end_circle.ChangeClosedCurveSeam(t);
+                    crossSectionCurves = new Curve[] { spring_part_circle, pipe_end_circle };
+                    loftBreps = Brep.CreateFromLoft(crossSectionCurves, Point3d.Unset, Point3d.Unset, LoftType.Normal, false);
+                    Brep spring_extension = loftBreps[0];
+                    spring_extension = spring_extension.CapPlanarHoles(myDoc.ModelAbsoluteTolerance);
+
+                    if (differences != null && differences.Length > 0)
+                    {
+                        GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                    }
+
+                    Guid source_extension_guid = myDoc.Objects.Add(source_extension);
+                    Guid front_pipe_guid = myDoc.Objects.Add(front_pipe);
+                    Guid end_pipe_guid = myDoc.Objects.Add(end_pipe);
+                    Guid spring_extension_guid = myDoc.Objects.Add(spring_extension);
+
+                    specialPipes.Add(source_extension_guid);
+                    specialPipes.Add(front_pipe_guid);
+                    specialPipes.Add(end_pipe_guid);
+                    specialPipes.Add(spring_extension_guid);
+
+                    conductive_pipes_guid.Add(source_extension_guid);
+                    conductive_pipes_guid.Add(front_pipe_guid);
+                    conductive_pipes_guid.Add(end_pipe_guid);
+                    conductive_pipes_guid.Add(spring_extension_guid);
+
+                    conductive_pipes.Add(source_extension);
+                    conductive_pipes.Add(front_pipe);
+                    conductive_pipes.Add(end_pipe);
+                    conductive_pipes.Add(spring_extension);
+
+                    conductiveObjects.RemoveAt(closest_index);
+                    combinableLightPipe.RemoveAt(closest_index);
+                    combinableLightPipeRoute.RemoveAt(closest_index);
+
+                    differences = Brep.CreateBooleanDifference(currModel_Hollowed, spring_extension, myDoc.ModelAbsoluteTolerance);
+
+                    if (differences != null && differences.Length > 0)
+                    {
+                        GetSimilarVolumeBrep(differences, currModel_Hollowed, out currModel_Hollowed);
+                    }
+
+                    conductive_pipes.Add(conductive_part);
+                    conductive_pipes_guid.Add(myDoc.Objects.Add(conductive_part));
+                    conductive_pipes.Add(spring_part);
+                    conductive_pipes_guid.Add(myDoc.Objects.Add(spring_part));
+                }
+
                 //currModel_Hollowed_ObjId = myDoc.Objects.Add(currModel_Hollowed);
             }
             else
@@ -2981,6 +3298,11 @@ namespace DynaModel_v2.Final_Stage
             Voxel start = voxelSpace[customized_part_center_index.i, customized_part_center_index.j, customized_part_center_index.k];
             Voxel goal = voxelSpace[base_part_center_index.i, base_part_center_index.j, base_part_center_index.k];
 
+            if(start.isTaken == true)
+                return new List<Point3d>();
+            if (goal.isTaken == true)
+                return new List<Point3d>();
+
             start.Cost = 0; //TODO: Start is null, please FIX
             start.Distance = 0;
             start.SetDistance(goal.X, goal.Y, goal.Z);
@@ -3054,6 +3376,8 @@ namespace DynaModel_v2.Final_Stage
                         if (new_cost < next.Cost || !searchedVoxels.Contains(next))
                         {
                             next.Cost = new_cost;
+                            if (next != goal && next.Z < goal.Z + 5 && next.Z > goal.Z)
+                                new_cost -= 3;
                             double priority = new_cost + next.GetDistance(goal.X, goal.Y, goal.Z);
                             frontier.Enqueue(next, priority);
                             searchedVoxels.Add(next);
@@ -3061,7 +3385,6 @@ namespace DynaModel_v2.Final_Stage
                         }
                     }
                 }
-                int count = 0;
             }
             #endregion
 
