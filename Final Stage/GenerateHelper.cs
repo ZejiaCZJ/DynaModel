@@ -1994,7 +1994,7 @@ namespace DynaModel_v2.Final_Stage
                 bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
 
                 //Compare between two methods, use the shorter one
-                if (bestEndRoute.GetLength() + bestStartRoute.GetLength() + combinablePipeRoute.GetLength() > bestRoute.GetLength() + double.MaxValue)
+                if (bestEndRoute.GetLength() + bestStartRoute.GetLength() + combinablePipeRoute.GetLength() > bestRoute.GetLength())
                     approach = "A*";
             }
 
@@ -2256,7 +2256,7 @@ namespace DynaModel_v2.Final_Stage
                     bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
 
                     //Compare between two methods, use the shorter one
-                    if (bestEndRoute.GetLength() + bestStartRoute.GetLength() + combinablePipeRoute.GetLength() > bestRoute.GetLength() + double.MaxValue)
+                    if (bestEndRoute.GetLength() + bestStartRoute.GetLength() + combinablePipeRoute.GetLength() > bestRoute.GetLength())
                         approach = "A*";
                 }
 
