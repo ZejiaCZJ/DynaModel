@@ -1629,6 +1629,7 @@ namespace DynaModel_v2.Final_Stage
             
             List<Brep> customized_partBreps = savedItem.EndPointModel;
             List<(Brep, Brep)> lightSourcePipePairs = new List<(Brep, Brep)>(); 
+            List<Brep> mainPipePairs = new List<Brep>();
             int count = 0;
             
             PipeExit pipeExit = new PipeExit();
@@ -1778,7 +1779,7 @@ namespace DynaModel_v2.Final_Stage
                                 soluableExtension = soluableExtensions[0];
                                 valid = true;
 
-                                curve1 = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 2), 3.2).ToNurbsCurve();
+                                curve1 = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1.1), 3.2).ToNurbsCurve();
                                 curve2 = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, 3.2).ToNurbsCurve();
                                 if (!Curve.DoDirectionsMatch(curve1, curve2))
                                     curve2.Reverse();
@@ -1826,6 +1827,10 @@ namespace DynaModel_v2.Final_Stage
                 led_pipes.Add(conductivePipe[0]);
                 led_pipes_guid.Add(conductivePipeGuid);
                 InViewObject conductiveObject = new InViewObject(conductivePipe[0], conductivePipeGuid, "conductive pipe");
+
+
+
+                mainPipePairs.Add(soluablePipe[0]);
 
                 combinableLightPipeRoute.Add(soluablePipeRoute.Trim(CurveEnd.Both, 7));
                 combinableLightPipe.Add(soluablePipe[0]);
@@ -1906,6 +1911,15 @@ namespace DynaModel_v2.Final_Stage
                 //ignorePipesGuid.Add(a);
                 //led_pipes.Add(soluableExtension);
                 //led_pipes_guid.Add(a);
+            }
+
+            for(int i = 0; i < mainPipePairs.Count; i++)
+            {
+                Guid a = myDoc.Objects.Add(mainPipePairs[i], soluableAttribute);
+                specialPipes.Add(a);
+                ignorePipesGuid.Add(a);
+                led_pipes.Add(mainPipePairs[i]);
+                led_pipes_guid.Add(a);
             }
 
 
