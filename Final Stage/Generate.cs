@@ -261,6 +261,40 @@ namespace DynaModel_v2.Final_Stage
                 }
                 myDoc.Objects.Delete(generateHelper.currModel_Hollowed_ObjId, true);
                 generateHelper.currModel_Hollowed_ObjId = myDoc.Objects.Add(generateHelper.currModel_Hollowed);
+
+                List<(Brep, Brep)> lightSourcePipePairs = generateHelper.lightSourcePipePairs;
+                List<Brep> mainPipePairs = generateHelper.mainPipePairs;
+
+
+                for (int i = 0; i < lightSourcePipePairs.Count; i++)
+                {
+                    Brep soluableExtension = lightSourcePipePairs[i].Item1 as Brep;
+                    myDoc.Objects.Add(soluableExtension, generateHelper.redAttribute);
+                    for (int j = 0; j < lightSourcePipePairs.Count; j++)
+                    {
+
+                        if (i != j)
+                        {
+                            Brep cutter = lightSourcePipePairs[j].Item2 as Brep;
+                            myDoc.Objects.Add(cutter, generateHelper.soluableAttribute);
+                            //Brep[] differences = Brep.CreateBooleanDifference(new[] { soluableExtension }, new[] { cutter }, myDoc.ModelAbsoluteTolerance);
+                            //if (differences != null || differences.Length > 0)
+                            //    generateHelper.GetSimilarVolumeBrep(differences, soluableExtension, out soluableExtension);
+                        }
+                    }
+                    //Guid a = myDoc.Objects.Add(soluableExtension, redAttribute);
+                    //specialPipes.Add(a);
+                    //ignorePipesGuid.Add(a);
+                    //led_pipes.Add(soluableExtension);
+                    //led_pipes_guid.Add(a);
+                }
+
+                for (int i = 0; i < mainPipePairs.Count; i++)
+                {
+                    Guid a = myDoc.Objects.Add(mainPipePairs[i], generateHelper.soluableAttribute);
+                }
+
+
             }
         }
 

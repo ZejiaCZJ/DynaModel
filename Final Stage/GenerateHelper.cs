@@ -36,7 +36,7 @@ namespace DynaModel_v2.Final_Stage
         List<Guid> allBreps_guid = new List<Guid>();
         Voxel[,,] voxelSpace = null;
         List<Brep> allPipes = new List<Brep>();
-        ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
+        public ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
         double foundation_length = 60;
         double foundation_width = 90;
         double foundation_height = 30;
@@ -90,6 +90,8 @@ namespace DynaModel_v2.Final_Stage
         private List<InViewObject> conductiveObjects = new List<InViewObject>();
         public List<Brep> led_pipes = new List<Brep>();
         public List<Guid> led_pipes_guid = new List<Guid>();
+        public List<(Brep, Brep)> lightSourcePipePairs = new List<(Brep, Brep)>();
+        public List<Brep> mainPipePairs = new List<Brep>();
 
         //Button parameter
         private List<PipeExit> conductivePipeExitPts = new List<PipeExit>();
@@ -1628,8 +1630,7 @@ namespace DynaModel_v2.Final_Stage
             
             
             List<Brep> customized_partBreps = savedItem.EndPointModel;
-            List<(Brep, Brep)> lightSourcePipePairs = new List<(Brep, Brep)>(); 
-            List<Brep> mainPipePairs = new List<Brep>();
+            
             int count = 0;
             
             PipeExit pipeExit = new PipeExit();
@@ -1890,39 +1891,6 @@ namespace DynaModel_v2.Final_Stage
             }
 
 
-            for(int i = 0; i < lightSourcePipePairs.Count; i++)
-            {
-                Brep soluableExtension = lightSourcePipePairs[i].Item1 as Brep;
-                myDoc.Objects.Add(soluableExtension, redAttribute);
-                for(int j = 0; j < lightSourcePipePairs.Count; j++)
-                {
-
-                    if(i != j)
-                    {
-                        Brep cutter = lightSourcePipePairs[j].Item2 as Brep;
-                        myDoc.Objects.Add(cutter, soluableAttribute);
-                        Brep[] differences = Brep.CreateBooleanDifference(new[] { soluableExtension }, new[] { cutter }, myDoc.ModelAbsoluteTolerance);
-                        if (differences != null || differences.Length > 0)
-                            GetSimilarVolumeBrep(differences, soluableExtension, out soluableExtension);
-                    }
-                }
-                //Guid a = myDoc.Objects.Add(soluableExtension, redAttribute);
-                //specialPipes.Add(a);
-                //ignorePipesGuid.Add(a);
-                //led_pipes.Add(soluableExtension);
-                //led_pipes_guid.Add(a);
-            }
-
-            for(int i = 0; i < mainPipePairs.Count; i++)
-            {
-                Guid a = myDoc.Objects.Add(mainPipePairs[i], soluableAttribute);
-                specialPipes.Add(a);
-                ignorePipesGuid.Add(a);
-                led_pipes.Add(mainPipePairs[i]);
-                led_pipes_guid.Add(a);
-            }
-
-
             ignorePipesGuid.Clear();
             myDoc.Objects.Hide(currModelObjId, true);
             myDoc.Views.Redraw();
@@ -2044,6 +2012,9 @@ namespace DynaModel_v2.Final_Stage
             //Find the best approach
             if(approach != "A*")
             {
+                //myDoc.Objects.Add(Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1));
+                //myDoc.Objects.AddPoint(Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1).PointAtEnd);
+                //myDoc.Objects.AddPoint(combinablePipeRoute.PointAtStart);
                 bestStartRoute_pts.Add(combinablePipeRoute.PointAtStart);
                 bestEndRoute = Curve.CreateInterpolatedCurve(bestEndRoute_pts, 1);
                 bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
@@ -3504,8 +3475,10 @@ namespace DynaModel_v2.Final_Stage
 
                 Boolean isIntersected = false;
                 int index = 1;
+                Guid temp_guid = myDoc.Objects.Add(currModel_Hollowed);
                 while (isIntersected == true || !interpolatedRoute_Point3d[interpolatedRoute_Point3d.Count - 1].Equals(bestRoute_Point3d[bestRoute_Point3d.Count - 1]))
                 {
+                    
                     Point3d endPoint = bestRoute_Point3d[bestRoute_Point3d.Count - index];
                     //Create a pipe for the current section of the line
                     Curve betterRoute = (new Line(interpolatedRoute_Point3d[interpolatedRoute_Point3d.Count - 1], endPoint)).ToNurbsCurve();
@@ -3522,6 +3495,7 @@ namespace DynaModel_v2.Final_Stage
 
 
                     //Check if the Pipe is intersecting with other breps
+                    
                     var allObjects = new List<RhinoObject>(myDoc.Objects.GetObjectList(ObjectType.Brep));
                     foreach (var item in allObjects)
                     {
@@ -3554,6 +3528,7 @@ namespace DynaModel_v2.Final_Stage
                             }
                         }
                     }
+                    
 
                     if (isIntersected)
                     {
@@ -3563,6 +3538,7 @@ namespace DynaModel_v2.Final_Stage
                     interpolatedRoute_Point3d.Add(endPoint);
                     index = 1;
                 }
+                myDoc.Objects.Delete(temp_guid, true);
                 return interpolatedRoute_Point3d;
             }
             
@@ -3591,7 +3567,7 @@ namespace DynaModel_v2.Final_Stage
             return false;
         }
 
-        private bool GetSimilarVolumeBrep(IEnumerable<Brep> breps, Brep originalBrep, out Brep brep)
+        public bool GetSimilarVolumeBrep(IEnumerable<Brep> breps, Brep originalBrep, out Brep brep)
         {
             brep = null;
             double minDifference = double.MaxValue;
