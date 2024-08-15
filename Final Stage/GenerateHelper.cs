@@ -2044,6 +2044,7 @@ namespace DynaModel_v2.Final_Stage
             //Find the best approach
             if(approach != "A*")
             {
+                bestStartRoute_pts.Add(combinablePipeRoute.PointAtStart);
                 bestEndRoute = Curve.CreateInterpolatedCurve(bestEndRoute_pts, 1);
                 bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
 
@@ -2306,6 +2307,7 @@ namespace DynaModel_v2.Final_Stage
                 //Find the best approach
                 if (approach != "A*")
                 {
+                    bestStartRoute_pts.Add(combinablePipeRoute.PointAtStart);
                     bestEndRoute = Curve.CreateInterpolatedCurve(bestEndRoute_pts, 1);
                     bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
 
