@@ -20,98 +20,58 @@ namespace DynaModel_v2.Translational_Motion
 {
     public class Translational_GearSet
     {
-        private BevelGear end_gear;
-        private Brep end_gear_top_gasket;
-        private Brep end_gear_bottom_gasket;
-        private Brep end_gear_shaft;
-        private Brep end_gear_shaft_clearance;
+        private Rack rack;
+        private Brep rack_holder;
+        private Line rack_holder_rail;
 
-        private BevelGear first_driven_gear;
-        private Brep first_driven_gear_top_gasket;
-        private Brep first_driven_gear_bottom_gasket;
+        private SpurGear spur_gear;
+        private Brep spur_gear_top_gasket;
+        private Circle spur_gear_top_gasket_circle;
 
-        private Brep shaft;
-        private Brep shaft_clearance;
+        private BevelGear first_bevel_gear;
+        private Brep first_bevel_gear_bottom_gasket;
+        private Circle first_bevel_gear_bottom_gasket_circle;
+
+        private BevelGear second_bevel_gear;
+        private Brep second_bevel_gear_top_gasket;
+        private Circle second_bevel_gear_top_gasket_circle;
 
         private SpurGear connector_gear;
         private Brep connector_gear_top_gasket;
-        private Brep connector_gear_bottom_gasket;
+        private Circle connector_gear_bottom_gasket_circle;
 
-        private SpurGear second_driven_gear;
-        private Brep second_driven_gear_shaft;
-        private Brep second_driven_gear_top_gasket;
-        private Brep second_driven_gear_bottom_gasket;
+        private List<SpurGear> intermediate_gears;
+        private List<Brep> intermediate_gears_top_gaskets;
+        private List<Brep> intermediate_gears_bottom_gaskets;
+        private List<Circle> intermediate_gears_bottom_gaskets_circles;
+        private List<Circle> intermediate_gears_top_gaskets_circles;
 
-        private Curve end_gear_shaft_clearance_rail;
-        private Curve shaft_clearance_rail;
+        public Rack Rack { get; set; }
+        public Brep RackHolder { get; set; }
+        public Line RackHolderRail { get; set; }
 
-        private Curve end_gear_shaft_rail;
-        private Curve shaft_rail;
+        public SpurGear SpurGear { get; set; }
+        public Brep SpurGearTopGasket { get; set; }
+        public Circle SpurGearTopGasketCircle { get; set; }
 
-        private Curve end_gear_top_gasket_rail;
-        private Curve end_gear_bottom_gasket_rail;
+        public BevelGear FirstBevelGear { get; set; }
+        public Brep FirstBevelGearBottomGasket { get; set; }
+        public Circle FirstBevelGearBottomGasketCircle { get; set; }
 
-        private Curve first_driven_gear_top_gasket_rail;
-        private Curve first_driven_gear_bottom_gasket_rail;
+        public BevelGear SecondBevelGear { get; set; }
+        public Brep SecondBevelGearTopGasket { get; set; }
+        public Circle SecondBevelGearTopGasketCircle { get; set; }
 
-        private Curve connector_gear_top_gasket_rail;
-        private Curve connector_gear_bottom_gasket_rail;
+        public SpurGear ConnectorGear { get; set; }
+        public Brep ConnectorGearTopGasket { get; set; }
+        public Circle ConnectorGearBottomGasketCircle { get; set; }
 
-        private Curve second_driven_gear_top_gasket_rail;
-        private Curve second_driven_gear_bottom_gasket_rail;
+        public List<SpurGear> IntermediateGears { get; set; }
+        public List<Brep> IntermediateGearsTopGaskets { get; set; }
+        public List<Brep> IntermediateGearsBottomGaskets { get; set; }
+        public List<Circle> IntermediateGearsBottomGasketsCircles { get; set; }
+        public List<Circle> IntermediateGearsTopGasketsCircles { get; set; }
 
-
-        public BevelGear EndGear { get => end_gear; set => end_gear = value; }
-
-        public BevelGear FirstDrivenGear { get => first_driven_gear; set => first_driven_gear = value; }
-
-        public SpurGear ConnectorGear { get => connector_gear; set => connector_gear = value; }
-
-        public SpurGear SecondDrivenGear { get => second_driven_gear; set => second_driven_gear = value; }
-
-        public Brep EndGearTopGasket { get => end_gear_top_gasket; set => end_gear_top_gasket = value.DuplicateBrep(); }
-
-        public Brep EndGearBottomGasket { get => end_gear_bottom_gasket; set => end_gear_bottom_gasket = value.DuplicateBrep(); }
-
-        public Brep EndGearShaft { get => end_gear_shaft; set => end_gear_shaft = value.DuplicateBrep(); }
-
-        public Brep FirstDrivenGearTopGasket { get => first_driven_gear_top_gasket; set => first_driven_gear_top_gasket = value.DuplicateBrep(); }
-
-        public Brep FirstDrivenGearBottomGasket { get => first_driven_gear_bottom_gasket; set => first_driven_gear_bottom_gasket = value.DuplicateBrep(); }
-
-        public Brep ConnectorGearTopGasket { get => connector_gear_top_gasket; set => connector_gear_top_gasket = value.DuplicateBrep(); }
-
-        public Brep ConnectorGearBottomGasket { get => connector_gear_bottom_gasket; set => connector_gear_bottom_gasket = value.DuplicateBrep(); }
-
-        public Brep Shaft { get => shaft; set => shaft = value.DuplicateBrep(); }
-
-        public Brep ShaftClearance { get => shaft_clearance; set => shaft_clearance = value.DuplicateBrep(); }
-
-        public Brep EndGearShaftClearance { get => end_gear_shaft_clearance; set => end_gear_shaft_clearance = value.DuplicateBrep(); }
-
-        public Curve EndGearShaftRail { get => end_gear_shaft_rail; set => end_gear_shaft_rail = value; }
-
-        public Curve ShaftRail { get => shaft_rail; set => shaft_rail = value; }
-
-        public Curve EndGearTopGasketRail { get => end_gear_top_gasket_rail; set => end_gear_top_gasket_rail = value; }
-
-        public Curve EndGearBottomGasketRail { get => end_gear_bottom_gasket_rail; set => end_gear_bottom_gasket_rail = value; }
-
-        public Curve FirstDrivenGearTopGasketRail { get => first_driven_gear_top_gasket_rail; set => first_driven_gear_top_gasket_rail = value; }
-
-        public Curve FirstDrivenGearBottomGasketRail { get => first_driven_gear_bottom_gasket_rail; set => first_driven_gear_bottom_gasket_rail = value; }
-
-        public Curve SecondDrivenGearTopGasketRail { get => second_driven_gear_top_gasket_rail; set => second_driven_gear_top_gasket_rail = value; }
-
-        public Curve SecondDrivenGearBottomGasketRail { get => second_driven_gear_bottom_gasket_rail; set => second_driven_gear_bottom_gasket_rail = value; }
-
-        public Curve ConnectorGearTopGasketRail { get => connector_gear_top_gasket_rail; set => connector_gear_top_gasket_rail = value; }
-
-        public Curve ConnectorGearBottomGasketRail { get => connector_gear_bottom_gasket_rail; set => connector_gear_bottom_gasket_rail = value; }
-
-        public Curve EndGearShaftClearanceRail { get => end_gear_shaft_clearance_rail; set => end_gear_shaft_clearance_rail = value; }
-
-        public Curve ShaftClearanceRail { get => shaft_clearance_rail; set => shaft_clearance_rail = value; }
     }
 
 
@@ -129,6 +89,16 @@ namespace DynaModel_v2.Translational_Motion
         private double ratio;
         private double clearance = 0.5;
         private double shaft_radius = 3;
+        private static double clearance_shaft_radius = 3.4;
+        private static double shaft_extends_from_gear = 3;
+        private static double gasket_inner_radius = 3.4; //shaft_radius + 0.4
+        private static double gasket_outer_radius = 7;
+        private static double gasket_clearance_inner_radius = 3.3;
+        private static double gasket_clearance_outer_radius = clearance_shaft_radius;
+        private static double clearance_gasket_radius = 1.7;
+        private static double gasket_gear_gap = 0.6;
+        private static double bottom_gasket_gear_height = 4;
+        private static double top_gasket_gear_height = 3;
         ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
 
         private List<Brep> allBreps;
@@ -438,7 +408,7 @@ namespace DynaModel_v2.Translational_Motion
 
                     double bevel_gear_coneAngle = RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(0, 0, 1), spur_gear_direction));
 
-                    #region first shaft
+                    #region first shaft (shaft between spur gear and first bevel gear)
                     double shaft_length = 30;
                     if (bevel_gear_coneAngle < 90)
                         shaft_length = 10;
@@ -450,14 +420,16 @@ namespace DynaModel_v2.Translational_Motion
 
                     #region first bevel gear
                     Vector3d first_bevel_gear_direction = spur_gear_direction;
+                    int first_bevel_gear_teeth_num = teeth_num;
                     bool isReversed = false;
                     if (bevel_gear_coneAngle > 90)
                     {
                         first_bevel_gear_direction = Vector3d.Negate(first_bevel_gear_direction);
                         bevel_gear_coneAngle = 180 - bevel_gear_coneAngle;
                         isReversed = true;
+                        first_bevel_gear_teeth_num = 20;
                     }
-                    BevelGear first_bevel_gear = new BevelGear(shaft_line.PointAtEnd, first_bevel_gear_direction, spur_gear_x_dir, teeth_num, module, pressure_angle, thickness, selfRotAngle, bevel_gear_coneAngle, false);
+                    BevelGear first_bevel_gear = new BevelGear(shaft_line.PointAtEnd, first_bevel_gear_direction, spur_gear_x_dir, first_bevel_gear_teeth_num, module, pressure_angle, thickness, selfRotAngle, bevel_gear_coneAngle, false);
                     #endregion
 
                     #region second_bevel_gear
@@ -512,6 +484,179 @@ namespace DynaModel_v2.Translational_Motion
                     //RhinoApp.WriteLine($"First driven gear rotated {RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(1, 0, 0)))} degrees");
                     double second_bevel_gear_coneAngle = bevel_gear_coneAngle;
                     BevelGear second_bevel_gear = new BevelGear(second_bevel_gear_centerPoint, second_bevel_gear_Direction, second_bevel_gear_xDir, second_bevel_gear_teethNum, module, pressure_angle, thickness, second_bevel_gear_selfRotAngle, second_bevel_gear_coneAngle, false);
+
+                    if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 7.5)
+                    {
+                        RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector.");
+                        Cancel();
+                        return;
+                    }
+                    
+                    
+                    #endregion
+
+                    #region connector_gear
+                    Point3d connector_gear_centerPoint = new Point3d(second_bevel_gear.CenterPoint.X, second_bevel_gear.CenterPoint.Y, start_gear.CenterPoint.Z);
+                    Vector3d connector_gear_Dir = new Vector3d(0, 0, 1);
+
+                    Line r = new Line(connector_gear_centerPoint, start_gear.CenterPoint);
+
+                    Vector3d connector_gear_x_dir = Vector3d.Negate(r.Direction);
+                    int connector_gear_teethNum = (int)(start_gear_teethNum * ratio);
+                    SpurGear connector_gear = new SpurGear(connector_gear_centerPoint, connector_gear_Dir, connector_gear_x_dir, connector_gear_teethNum, module, pressure_angle, thickness, 0, false);
+                    //connector_gear.Rotate(360 / connector_gear_teethNum / 2);
+                    #endregion
+
+                    #region shaft between second bevel gear and connector gear
+                    Curve connector_shaft_rail = new Line(new Point3d(second_bevel_gear.CenterPoint.X, second_bevel_gear.CenterPoint.Y, second_bevel_gear.Model.GetBoundingBox(true).Max.Z), new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Model.GetBoundingBox(true).Min.Z)).ToNurbsCurve();
+                    connector_shaft_rail = connector_shaft_rail.Extend(CurveEnd.Both, shaft_extends_from_gear, CurveExtensionStyle.Arc);
+                    Brep connector_shaft = Brep.CreatePipe(connector_shaft_rail, shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    #endregion
+
+                    #region create intermediate gears
+                    Vector3d intermediate_gear_Direction = new Vector3d(0, 0, 1);
+                    Vector3d intermediate_gear_xDir = new Vector3d(0, 0, 0);
+                    double intermediate_gear_selfRotAngle = 0;
+
+                    r = new Line(connector_gear_centerPoint, r.Direction, 25);
+                    start_gear = new SpurGear(r.To, start_gear_Direction, start_gear_xDir, start_gear_teethNum, module, pressure_angle, thickness, 0, false);
+
+                    double tips_distance = (connector_gear.CenterPoint.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius - connector_gear.BaseRadius);//Distance from connector gear's tip to start gear's tip
+                    (int, int) number_of_gear = bestNumberOfGear(tips_distance);
+
+                    List<SpurGear> intermediates_gears = new List<SpurGear>();
+
+                    if (number_of_gear.Item1 == 0)
+                    {
+                        RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector.");
+                        Cancel();
+                        return;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < number_of_gear.Item1; i++)
+                        {
+                            Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
+
+                            start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i+1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
+                            Point3d intermediate_centerPoint = start_gear_connection_rail.To;
+                            intermediate_gear_xDir = start_gear_connection_rail.Direction;
+                            SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+                            
+                            intermediates_gears.Add(intermediate_gear);
+
+                        }
+
+                        //Make all gears match
+                        if (number_of_gear.Item1 == 1)
+                        {
+                            intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
+                            int count = 0;
+                            Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            while(intersectionCurves != null && intersectionCurves.Length > 0)
+                            {
+                                connector_gear.Rotate(0.5);
+                                Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                count++;
+                            }
+                            if(count > 0)
+                            {
+                                connector_gear.Rotate(2);
+                                Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                {
+                                    connector_gear.Rotate(0.15);
+                                    Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                }
+                            }
+                        }
+                        if (number_of_gear.Item1 == 2)
+                        {
+                            intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
+                            int count = 0;
+                            Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            while (intersectionCurves != null && intersectionCurves.Length > 0)
+                            {
+                                connector_gear.Rotate(0.5);
+                                Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                count++;
+                            }
+
+                            if(count > 0)
+                            {
+                                connector_gear.Rotate(2);
+                                Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                {
+                                    connector_gear.Rotate(0.1);
+                                    Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                }
+                            }
+                            
+                        }
+                        if (number_of_gear.Item1 == 3)
+                        {
+                            intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
+                            intermediates_gears[2].Rotate(360 / number_of_gear.Item2 / 2);
+
+                            int count = 0;
+
+                            Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            while (intersectionCurves != null && intersectionCurves.Length > 0)
+                            {
+                                connector_gear.Rotate(0.5);
+                                Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                count++;
+                            }
+
+                            if(count > 0)
+                            {
+                                connector_gear.Rotate(2);
+                                Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                {
+                                    connector_gear.Rotate(0.1);
+                                    Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                }
+                            }
+                        }
+                    }
+                    #endregion
+
+
+                    #region spur gear top gaskets
+
+
+                    #endregion
+
+                    #region  first bevel gear bottom gaskets
+
+
+                    #endregion
+
+                    #region  second bevel gear top gaskets
+
+
+                    #endregion
+
+                    #region  connect gear bottom gaskets
+
+
+                    #endregion
+
+                    #region  intermediate gear top gaskets
+
+
+                    #endregion
+
+                    #region  intermediate gear bottom gaskets
+
+
+                    #endregion
+
+
+                    #region check for intersection
+
                     #endregion
 
                     myDoc.Objects.Add(rack.Model);
@@ -520,11 +665,73 @@ namespace DynaModel_v2.Translational_Motion
                     myDoc.Objects.Add(shaft);
                     myDoc.Objects.Add(second_bevel_gear.Model);
                     myDoc.Objects.Add(rack_holder);
+                    myDoc.Objects.Add(connector_gear.Model);
+                    myDoc.Objects.Add(connector_shaft);
+                    myDoc.Objects.Add(start_gear.Model);
+
+                    foreach(var intermediate_gear in intermediates_gears)
+                    {
+                        myDoc.Objects.Add(intermediate_gear.Model);
+                    }
 
                     TrueOnlyButtonValueController_Translational.finished = 1;
                 }
                 #endregion
             }
+        }
+
+        private void Cancel()
+        {
+            var allObjects = new List<RhinoObject>(RhinoDoc.ActiveDoc.Objects.GetObjectList(ObjectType.AnyObject));
+            foreach (var singleObject in allObjects)
+                if (SavedItems.originalModelGuids.All(guid => guid != singleObject.Id))
+                    RhinoDoc.ActiveDoc.Objects.Delete(singleObject.Id, true);
+            RhinoDoc.ActiveDoc.Objects.Show(SavedItems.originalModelGuids[0], true);
+        }
+
+
+        private double getBaseRadius(int teethNum)
+        {
+            double pitchDiameter = module * teethNum;
+            double outDiameter = pitchDiameter;
+            return outDiameter / 2;
+        }
+
+        private double getTipRadius(int teethNum)
+        {
+            double pitchDiameter = module * teethNum;
+            double outDiameter = pitchDiameter + 2 * module;
+            return outDiameter / 2;
+        }
+
+        private int getNumTeeth(double tipRadius)
+        {
+            int numTeeth = ((int)((2 * tipRadius - 2 * module) / module));
+            return numTeeth;
+        }
+
+        private (int, int) bestNumberOfGear(double tips_distance)
+        {
+            int numTeeth = getNumTeeth(tips_distance/2);
+
+
+
+            if (numTeeth <= 10)
+                return (1, numTeeth);
+            else if (numTeeth < 30 && numTeeth > 10)
+            {
+                tips_distance = tips_distance / 2 + module;
+
+                return (2, getNumTeeth(tips_distance / 2));
+            }
+            else if (numTeeth >= 30)
+            {
+                tips_distance = (tips_distance + 2 * module) / 3;
+
+                return (3, getNumTeeth(tips_distance / 2));
+            }
+
+            return (0, 0);
         }
 
 
