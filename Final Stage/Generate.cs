@@ -75,6 +75,11 @@ namespace DynaModel_v2.Final_Stage
                         Item item = SavedItems.items[i];
                         generateHelper.GenerateRotationalMotion(ref item, out List<Brep> subtrahends);
                     }
+                    if (SavedItems.items[i].Name == "Translational Motion")
+                    {
+                        Item item = SavedItems.items[i];
+                        generateHelper.GenerateTranslationalMotion(ref item, out List<Brep> subtrahends);
+                    }
                     if (SavedItems.items[i].Name == "LED Light")
                     {
                         Item item = SavedItems.items[i];
@@ -304,6 +309,11 @@ namespace DynaModel_v2.Final_Stage
             foreach (var item in items)
             {
                 if(item.Name == "Rotational Motion")
+                    new_SavedItem.Add(item);
+            }
+            foreach (var item in items)
+            {
+                if (item.Name == "Translational Motion")
                     new_SavedItem.Add(item);
             }
             foreach (var item in items)

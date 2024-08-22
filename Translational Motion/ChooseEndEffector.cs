@@ -877,11 +877,6 @@ namespace DynaModel_v2.Translational_Motion
                     }
                     #endregion
 
-
-                    myDoc.Objects.AddPoint(first_bevel_gear.TopPoint, lightGuideAttribute);
-                    myDoc.Objects.AddPoint(first_bevel_gear.BottomPoint, soluableAttribute);
-                    myDoc.Objects.AddPoint(spur_gear.TopPoint, lightGuideAttribute);
-                    myDoc.Objects.AddPoint(spur_gear.BottomPoint, soluableAttribute);
                     myDoc.Objects.Add(rack.Model);
                     myDoc.Objects.Add(spur_gear.Model);
                     myDoc.Objects.Add(first_bevel_gear.Model);
