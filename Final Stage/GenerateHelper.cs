@@ -1624,7 +1624,7 @@ namespace DynaModel_v2.Final_Stage
             #region first bevel gear
             double shaft_length = 30;
             if (bevel_gear_coneAngle <= 100)
-                shaft_length = 10;
+                shaft_length = 20;
 
             //Generate a bevel gear that connects to the spur gear and the shaft between them
             Curve shaft_line = new Line(spur_gear.CenterPoint, spur_gear_direction, shaft_length).ToNurbsCurve();
@@ -4009,6 +4009,38 @@ namespace DynaModel_v2.Final_Stage
                 bool found = false;
 
                 #region Traverse the 5*5*5 bounding box of the estimated index to see if there is a better one
+                //if (voxelSpace[estimated_i, estimated_j, estimated_k].isTaken)
+                //{
+                //    for (int i = estimated_i - 8; i < estimated_i + 9; i++)
+                //    {
+                //        for (int j = estimated_j - 8; j < estimated_j + 9; j++)
+                //        {
+                //            for (int k = estimated_k - 8; k < estimated_k + 9; k++)
+                //            {
+                //                if (i < voxelSpace.GetLength(0) && j < voxelSpace.GetLength(1) && k < voxelSpace.GetLength(2) && i >= 0 && j >= 0 && k >= 0)
+                //                {
+                //                    double distance = voxelSpace[i, j, k].GetDistance(point.X, point.Y, point.Z);
+
+                //                    if (voxelSpace[i, j, k].isTaken == false && distance < smallestDistance)
+                //                    {
+                //                        smallestDistance = distance;
+                //                        index.i = i;
+                //                        index.j = j;
+                //                        index.k = k;
+                //                        found = true;
+                //                        break;
+                //                    }
+                //                }
+                //                if (found == true)
+                //                    break;
+                //            }
+                //            if (found == true)
+                //                break;
+                //        }
+                //        if (found == true)
+                //            break;
+                //    }
+                //}
                 if (voxelSpace[estimated_i, estimated_j, estimated_k].isTaken)
                 {
                     for (int i = estimated_i - 8; i < estimated_i + 9; i++)
@@ -4027,23 +4059,15 @@ namespace DynaModel_v2.Final_Stage
                                         index.i = i;
                                         index.j = j;
                                         index.k = k;
-                                        found = true;
-                                        break;
                                     }
                                 }
-                                if (found == true)
-                                    break;
                             }
-                            if (found == true)
-                                break;
                         }
-                        if (found == true)
-                            break;
                     }
                 }
                 #endregion
             }
-
+            
             else
             {
                 //Calculate the approximate index of Point3d. Then obtain the precise index that has the smallest distance within the 2*2*2 bounding box of the Point3d
