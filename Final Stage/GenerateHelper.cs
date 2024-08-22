@@ -2120,6 +2120,22 @@ namespace DynaModel_v2.Final_Stage
                 }
             }
 
+            Intersection.BrepBrep(first_bevel_gear.Model, rack_holder, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            if (intersectionCurves != null && intersectionCurves.Length > 0)
+            {
+                RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting with rack holder");
+                RollBack();
+                return false;
+            }
+
+            Intersection.BrepBrep(second_bevel_gear.Model, rack_holder, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            if (intersectionCurves != null && intersectionCurves.Length > 0)
+            {
+                RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting with rack holder");
+                RollBack();
+                return false;
+            }
+
             allBreps = getAllBreps();
 
             for (int i = 0; i < allBreps.Count; i++)
@@ -2165,26 +2181,18 @@ namespace DynaModel_v2.Final_Stage
 
             #endregion
 
-            myDoc.Objects.Add(rack.Model);
-            myDoc.Objects.Add(spur_gear.Model);
-            myDoc.Objects.Add(first_bevel_gear.Model);
-            myDoc.Objects.Add(shaft);
+            specialPipes.Add(myDoc.Objects.Add(rack.Model));
+            specialPipes.Add(myDoc.Objects.Add(spur_gear.Model));
+            specialPipes.Add(myDoc.Objects.Add(first_bevel_gear.Model));
+            specialPipes.Add(myDoc.Objects.Add(shaft));
             myDoc.Objects.Add(second_bevel_gear.Model);
-            myDoc.Objects.Add(rack_holder);
+            specialPipes.Add(myDoc.Objects.Add(rack_holder));
             myDoc.Objects.Add(connector_gear.Model);
             myDoc.Objects.Add(connector_shaft);
             myDoc.Objects.Add(start_gear.Model);
-            myDoc.Objects.Add(spur_gear_bottom_gasket);
-            myDoc.Objects.Add(first_bevel_gear_top_gasket);
-            myDoc.Objects.Add(second_bevel_gear_top_gasket);
-            myDoc.Objects.Add(connector_gear_bottom_gasket);
             if (endEffector_Hollowed != null)
                 myDoc.Objects.Add(endEffector_Hollowed);
 
-            foreach (var gasket in intermediate_gear_top_gaskets)
-                myDoc.Objects.Add(gasket);
-            foreach (var gasket in intermediate_gear_bottom_gaskets)
-                myDoc.Objects.Add(gasket);
             foreach (var intermediate_gear_shaft in intermediate_gear_shafts)
                 myDoc.Objects.Add(intermediate_gear_shaft);
 
@@ -2193,6 +2201,24 @@ namespace DynaModel_v2.Final_Stage
             {
                 myDoc.Objects.Add(intermediate_gear.Model);
             }
+
+            gasketCircles.Add(spur_gear_bottom_gasket_circle.ToNurbsCurve());
+            gasketCircles.Add(first_bevel_gear_top_gasket_circle.ToNurbsCurve());
+            gasketCircles.Add(second_bevel_gear_top_gasket_circle.ToNurbsCurve());
+            gasketCircles.Add(connector_gear_bottom_gasket_circle.ToNurbsCurve());
+            foreach(var circles in intermediate_gear_top_gaskets_circles)
+                gasketCircles.Add(circles.ToNurbsCurve());
+            foreach (var circles in intermediate_gear_bottom_gaskets_circles)
+                gasketCircles.Add(circles.ToNurbsCurve());
+
+            gaskets_guid.Add(myDoc.Objects.Add(spur_gear_bottom_gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(first_bevel_gear_top_gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(second_bevel_gear_top_gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(connector_gear_bottom_gasket));
+            foreach (var gasket in intermediate_gear_top_gaskets)
+                gaskets_guid.Add(myDoc.Objects.Add(gasket));
+            foreach (var gasket in intermediate_gear_bottom_gaskets)
+                gaskets_guid.Add(myDoc.Objects.Add(gasket));
 
 
             return true;
@@ -2582,8 +2608,8 @@ namespace DynaModel_v2.Final_Stage
                                 soluableExtension = soluableExtensions[0];
                                 valid = true;
 
-                                curve1 = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1.1), led_pipe_outer_radius).ToNurbsCurve();
-                                curve2 = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, led_pipe_outer_radius).ToNurbsCurve();
+                                curve1 = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1.1), led_pipe_inner_radius).ToNurbsCurve();
+                                curve2 = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, led_pipe_inner_radius).ToNurbsCurve();
                                 if (!Curve.DoDirectionsMatch(curve1, curve2))
                                     curve2.Reverse();
                                 start = curve1.PointAtStart;
