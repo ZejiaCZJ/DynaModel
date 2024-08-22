@@ -25,12 +25,12 @@ namespace DynaModel_v2.Translational_Motion
         private Line rack_holder_rail;
 
         private SpurGear spur_gear;
-        private Brep spur_gear_top_gasket;
-        private Circle spur_gear_top_gasket_circle;
+        private Brep spur_gear_bottom_gasket;
+        private Circle spur_gear_bottom_gasket_circle;
 
         private BevelGear first_bevel_gear;
-        private Brep first_bevel_gear_bottom_gasket;
-        private Circle first_bevel_gear_bottom_gasket_circle;
+        private Brep first_bevel_gear_top_gasket;
+        private Circle first_bevel_gear_top_gasket_circle;
 
         private BevelGear second_bevel_gear;
         private Brep second_bevel_gear_top_gasket;
@@ -51,12 +51,12 @@ namespace DynaModel_v2.Translational_Motion
         public Line RackHolderRail { get; set; }
 
         public SpurGear SpurGear { get; set; }
-        public Brep SpurGearTopGasket { get; set; }
-        public Circle SpurGearTopGasketCircle { get; set; }
+        public Brep SpurGearBottomGasket { get; set; }
+        public Circle SpurGearBottomGasketCircle { get; set; }
 
         public BevelGear FirstBevelGear { get; set; }
-        public Brep FirstBevelGearBottomGasket { get; set; }
-        public Circle FirstBevelGearBottomGasketCircle { get; set; }
+        public Brep FirstBevelGearTopGasket { get; set; }
+        public Circle FirstBevelGearTopGasketCircle { get; set; }
 
         public BevelGear SecondBevelGear { get; set; }
         public Brep SecondBevelGearTopGasket { get; set; }
@@ -103,6 +103,9 @@ namespace DynaModel_v2.Translational_Motion
 
         private List<Brep> allBreps;
         private List<Guid> allBreps_guid;
+        private List<Brep> allGears;
+        private List<Brep> allGaskets;
+        private List<Brep> allShafts;
 
 
         /// <summary>
@@ -178,7 +181,15 @@ namespace DynaModel_v2.Translational_Motion
             soluableAttribute.MaterialSource = ObjectMaterialSource.MaterialFromObject;
             soluableAttribute.ObjectColor = Color.Green;
             soluableAttribute.ColorSource = ObjectColorSource.ColorFromObject;
+
+            allGears = new List<Brep>();
+            allGaskets = new List<Brep>();
+            allShafts = new List<Brep>();
+
+
         }
+
+
 
         /// <summary>
         /// Registers all the input parameters for this component.
@@ -288,7 +299,7 @@ namespace DynaModel_v2.Translational_Motion
                     BoundingBox mainModel_bbox = mainModel.GetBoundingBox(true);
 
                     //Find central point of the base of the bounding box
-                    Point3d start_gear_centerPoint = new Point3d(mainModel_bbox.Center.X, mainModel_bbox.Center.Y, mainModel_bbox.Min.Z + 5);
+                    Point3d start_gear_centerPoint = new Point3d(mainModel_bbox.Center.X, mainModel_bbox.Center.Y, mainModel_bbox.Min.Z + 10);
                     Vector3d start_gear_Direction = new Vector3d(0, 0, 1);
                     Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
                     int start_gear_teethNum = 10;
@@ -374,6 +385,7 @@ namespace DynaModel_v2.Translational_Motion
                     Line rack_holder_line = new Line(rack.BoundingBoxCenter, rackLineDirection, 10);
                     Curve rack_holder_curve = rack_holder_line.ToNurbsCurve();
                     Brep rack_holder = Brep.CreateThickPipe(rack_holder_curve, 6, 10, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    allGaskets.Add(rack_holder);
                     #endregion
 
 
@@ -404,33 +416,47 @@ namespace DynaModel_v2.Translational_Motion
                         Intersection.BrepBrep(rack.Model, spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPts);
                     }
                     spur_gear.Rotate(2);
+                    allGears.Add(spur_gear.Model);
                     #endregion
 
                     double bevel_gear_coneAngle = RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(0, 0, 1), spur_gear_direction));
 
-                    #region first shaft (shaft between spur gear and first bevel gear)
+                    #region first bevel gear
                     double shaft_length = 30;
-                    if (bevel_gear_coneAngle < 90)
+                    if (bevel_gear_coneAngle <= 100)
                         shaft_length = 10;
 
                     //Generate a bevel gear that connects to the spur gear and the shaft between them
                     Curve shaft_line = new Line(spur_gear.CenterPoint, spur_gear_direction, shaft_length).ToNurbsCurve();
-                    Brep shaft = Brep.CreatePipe(shaft_line, shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                    #endregion
 
-                    #region first bevel gear
                     Vector3d first_bevel_gear_direction = spur_gear_direction;
-                    int first_bevel_gear_teeth_num = teeth_num;
+                    int first_bevel_gear_teeth_num = 18;
                     bool isReversed = false;
-                    if (bevel_gear_coneAngle > 90)
+                    if (bevel_gear_coneAngle > 100)
                     {
                         first_bevel_gear_direction = Vector3d.Negate(first_bevel_gear_direction);
                         bevel_gear_coneAngle = 180 - bevel_gear_coneAngle;
                         isReversed = true;
-                        first_bevel_gear_teeth_num = 20;
                     }
                     BevelGear first_bevel_gear = new BevelGear(shaft_line.PointAtEnd, first_bevel_gear_direction, spur_gear_x_dir, first_bevel_gear_teeth_num, module, pressure_angle, thickness, selfRotAngle, bevel_gear_coneAngle, false);
+
+                    allGears.Add(first_bevel_gear.Model);
                     #endregion
+
+                    #region first shaft (shaft between spur gear and first bevel gear)
+                    Point3d point1 = first_bevel_gear.TopPoint;
+                    Point3d point2 = spur_gear.BottomPoint;
+
+                    if (isReversed)
+                        point1 = first_bevel_gear.BottomPoint;
+
+                    shaft_line = new Line(point1, point2).ToNurbsCurve();
+                    shaft_line = shaft_line.Extend(CurveEnd.Both, shaft_extends_from_gear, CurveExtensionStyle.Arc);
+
+                    Brep shaft = Brep.CreatePipe(shaft_line, shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    allShafts.Add(shaft);
+                    #endregion
+
 
                     #region second_bevel_gear
                     //Calculate the vector that is perpendicular to the end gear facing direction
@@ -447,7 +473,7 @@ namespace DynaModel_v2.Translational_Motion
                     rail3.Transform(transform);
 
                     //Find the center point of the gear
-                    int second_bevel_gear_teethNum = teeth_num;
+                    int second_bevel_gear_teethNum = first_bevel_gear_teeth_num;
                     double second_bevel_gear_pitchRadius = getPitchRadius(second_bevel_gear_teethNum) + clearance;
 
                     Line rail5 = new Line(rail1.To, new Vector3d(rail2.Direction.X, rail2.Direction.Y, 0), second_bevel_gear_pitchRadius);
@@ -491,8 +517,8 @@ namespace DynaModel_v2.Translational_Motion
                         Cancel();
                         return;
                     }
-                    
-                    
+
+                    allGears.Add(second_bevel_gear.Model);
                     #endregion
 
                     #region connector_gear
@@ -511,6 +537,7 @@ namespace DynaModel_v2.Translational_Motion
                     Curve connector_shaft_rail = new Line(new Point3d(second_bevel_gear.CenterPoint.X, second_bevel_gear.CenterPoint.Y, second_bevel_gear.Model.GetBoundingBox(true).Max.Z), new Point3d(connector_gear.CenterPoint.X, connector_gear.CenterPoint.Y, connector_gear.Model.GetBoundingBox(true).Min.Z)).ToNurbsCurve();
                     connector_shaft_rail = connector_shaft_rail.Extend(CurveEnd.Both, shaft_extends_from_gear, CurveExtensionStyle.Arc);
                     Brep connector_shaft = Brep.CreatePipe(connector_shaft_rail, shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                    allShafts.Add(connector_shaft);
                     #endregion
 
                     #region create intermediate gears
@@ -518,8 +545,8 @@ namespace DynaModel_v2.Translational_Motion
                     Vector3d intermediate_gear_xDir = new Vector3d(0, 0, 0);
                     double intermediate_gear_selfRotAngle = 0;
 
-                    r = new Line(connector_gear_centerPoint, r.Direction, 25);
-                    start_gear = new SpurGear(r.To, start_gear_Direction, start_gear_xDir, start_gear_teethNum, module, pressure_angle, thickness, 0, false);
+                    //r = new Line(connector_gear_centerPoint, r.Direction, 100);
+                    //start_gear = new SpurGear(r.To, start_gear_Direction, start_gear_xDir, start_gear_teethNum, module, pressure_angle, thickness, 0, false);
 
                     double tips_distance = (connector_gear.CenterPoint.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius - connector_gear.BaseRadius);//Distance from connector gear's tip to start gear's tip
                     (int, int) number_of_gear = bestNumberOfGear(tips_distance);
@@ -620,45 +647,241 @@ namespace DynaModel_v2.Translational_Motion
                                 }
                             }
                         }
+                        foreach (var intermediate_gear in intermediates_gears)
+                            allGears.Add(intermediate_gear.Model);
+                        allGears.Add(connector_gear.Model);
+                    }
+                    
+                    #endregion
+
+
+                    #region spur gear bottom gaskets
+                    Vector3d scaledVector_closerSide = Vector3d.Negate(spur_gear.Direction);
+                    scaledVector_closerSide.Unitize();
+                    scaledVector_closerSide *= gasket_gear_gap;
+
+                    point1 = spur_gear.BottomPoint + scaledVector_closerSide;
+
+                    Vector3d scaledVector_furtherSide = Vector3d.Negate(spur_gear.Direction);
+                    scaledVector_furtherSide.Unitize();
+                    scaledVector_furtherSide *= (gasket_gear_gap + bottom_gasket_gear_height);
+                    point2 = spur_gear.BottomPoint + scaledVector_furtherSide;
+
+                    Curve spur_gear_bottom_gasket_rail = new Line(point1, point2).ToNurbsCurve();
+                    Brep spur_gear_bottom_gasket = Brep.CreateThickPipe(spur_gear_bottom_gasket_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                    Point3d point3 = spur_gear_bottom_gasket_rail.PointAtLength(spur_gear_bottom_gasket_rail.GetLength() / 2);
+                    Circle spur_gear_bottom_gasket_circle = new Circle(new Plane(point3, spur_gear_bottom_gasket_rail.TangentAtStart), (gasket_outer_radius + gasket_inner_radius) / 2);
+                    allGaskets.Add(spur_gear_bottom_gasket);
+                    #endregion
+
+                    #region  first bevel gear top gaskets
+                    scaledVector_closerSide = first_bevel_gear.Direction;
+                    scaledVector_furtherSide = first_bevel_gear.Direction;
+                    point1 = first_bevel_gear.TopPoint;
+                    point2 = first_bevel_gear.TopPoint;
+
+                    if(isReversed)
+                    {
+                        scaledVector_closerSide = Vector3d.Negate(first_bevel_gear.Direction);
+                        scaledVector_furtherSide = Vector3d.Negate(first_bevel_gear.Direction);
+                        point1 = first_bevel_gear.BottomPoint;
+                        point2 = first_bevel_gear.BottomPoint;
+                        myDoc.Objects.AddPoint(first_bevel_gear.BottomPoint, soluableAttribute);
+                        myDoc.Objects.AddPoint(first_bevel_gear.TopPoint, lightGuideAttribute);
+                    }
+
+                    scaledVector_closerSide.Unitize();
+                    scaledVector_closerSide *= gasket_gear_gap;
+
+                    scaledVector_furtherSide.Unitize();
+                    scaledVector_furtherSide *= (gasket_gear_gap + bottom_gasket_gear_height);
+
+
+                    point1 += scaledVector_closerSide;
+                    point2 += scaledVector_furtherSide;
+
+                    Curve first_bevel_gear_top_gasket_rail = new Line(point1, point2).ToNurbsCurve();
+                    Brep first_bevel_gear_top_gasket = Brep.CreateThickPipe(first_bevel_gear_top_gasket_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                    point3 = first_bevel_gear_top_gasket_rail.PointAtLength(first_bevel_gear_top_gasket_rail.GetLength() / 2);
+                    Circle first_bevel_gear_top_gasket_circle = new Circle(new Plane(point3, first_bevel_gear_top_gasket_rail.TangentAtStart), (gasket_outer_radius + gasket_inner_radius) / 2);
+
+                    allGaskets.Add(first_bevel_gear_top_gasket);
+                    #endregion
+
+                    #region  second bevel gear top gaskets
+                    scaledVector_closerSide = second_bevel_gear.Direction;
+                    scaledVector_furtherSide = second_bevel_gear.Direction;
+                    point1 = second_bevel_gear.TopPoint;
+                    point2 = second_bevel_gear.TopPoint;
+
+                    scaledVector_closerSide.Unitize();
+                    scaledVector_closerSide *= gasket_gear_gap;
+
+                    scaledVector_furtherSide.Unitize();
+                    scaledVector_furtherSide *= (gasket_gear_gap + bottom_gasket_gear_height);
+
+
+                    point1 += scaledVector_closerSide;
+                    point2 += scaledVector_furtherSide;
+
+                    Curve second_bevel_gear_top_gasket_rail = new Line(point1, point2).ToNurbsCurve();
+                    Brep second_bevel_gear_top_gasket = Brep.CreateThickPipe(second_bevel_gear_top_gasket_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                    point3 = second_bevel_gear_top_gasket_rail.PointAtLength(second_bevel_gear_top_gasket_rail.GetLength() / 2);
+                    Circle second_bevel_gear_top_gasket_circle = new Circle(new Plane(point3, second_bevel_gear_top_gasket_rail.TangentAtStart), (gasket_outer_radius + gasket_inner_radius) / 2);
+
+                    allGaskets.Add(second_bevel_gear_top_gasket);
+                    #endregion
+
+                    #region  connect gear bottom gaskets
+                    scaledVector_closerSide = Vector3d.Negate(connector_gear.Direction);
+                    scaledVector_furtherSide = Vector3d.Negate(connector_gear.Direction);
+
+                    point1 = connector_gear.BottomPoint;
+                    point2 = connector_gear.BottomPoint;
+
+                    scaledVector_closerSide.Unitize();
+                    scaledVector_closerSide *= gasket_gear_gap;
+
+                    scaledVector_furtherSide.Unitize();
+                    scaledVector_furtherSide *= (gasket_gear_gap + bottom_gasket_gear_height);
+
+                    point1 += scaledVector_closerSide;
+                    point2 += scaledVector_furtherSide;
+
+
+                    Curve connector_gear_bottom_gasket_rail = new Line(point1, point2).ToNurbsCurve();
+                    Brep connector_gear_bottom_gasket = Brep.CreateThickPipe(connector_gear_bottom_gasket_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                    point3 = connector_gear_bottom_gasket_rail.PointAtLength(connector_gear_bottom_gasket_rail.GetLength() / 2);
+                    Circle connector_gear_bottom_gasket_circle = new Circle(new Plane(point3, connector_gear_bottom_gasket_rail.TangentAtStart), (gasket_outer_radius + gasket_inner_radius) / 2);
+
+                    allGaskets.Add(connector_gear_bottom_gasket);
+                    #endregion
+
+                    #region  intermediate gear top gaskets
+                    List <Brep> intermediate_gear_top_gaskets = new List<Brep>();
+                    List<Circle> intermediate_gear_top_gaskets_circles = new List<Circle>();
+                    foreach(var gear in intermediates_gears)
+                    {
+                        scaledVector_closerSide = gear.Direction;
+                        scaledVector_furtherSide = gear.Direction;
+
+                        point1 = gear.TopPoint;
+                        point2 = gear.TopPoint;
+
+                        scaledVector_closerSide.Unitize();
+                        scaledVector_closerSide *= gasket_gear_gap;
+
+                        scaledVector_furtherSide.Unitize();
+                        scaledVector_furtherSide *= (gasket_gear_gap + bottom_gasket_gear_height);
+
+
+                        point1 += scaledVector_closerSide;
+                        point2 += scaledVector_furtherSide;
+
+                        Curve intermediate_gear_top_gasket_rail = new Line(point1, point2).ToNurbsCurve();
+                        Brep intermediate_gear_top_gasket = Brep.CreateThickPipe(intermediate_gear_top_gasket_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                        point3 = intermediate_gear_top_gasket_rail.PointAtLength(intermediate_gear_top_gasket_rail.GetLength() / 2);
+                        Circle intermediate_gear_top_gasket_circle = new Circle(new Plane(point3, intermediate_gear_top_gasket_rail.TangentAtStart), (gasket_outer_radius + gasket_inner_radius) / 2);
+
+                        intermediate_gear_top_gaskets.Add(intermediate_gear_top_gasket);
+                        intermediate_gear_top_gaskets_circles.Add(intermediate_gear_top_gasket_circle);
+                        allGaskets.Add(intermediate_gear_top_gasket);
+                    }
+                    
+                    #endregion
+
+                    #region  intermediate gear bottom gaskets
+                    List <Brep> intermediate_gear_bottom_gaskets = new List<Brep>();
+                    List<Circle> intermediate_gear_bottom_gaskets_circles = new List<Circle>();
+                    foreach (var gear in intermediates_gears)
+                    {
+                        scaledVector_closerSide = Vector3d.Negate(gear.Direction);
+                        scaledVector_furtherSide = Vector3d.Negate(gear.Direction);
+
+                        point1 = gear.BottomPoint;
+                        point2 = gear.BottomPoint;
+
+                        scaledVector_closerSide.Unitize();
+                        scaledVector_closerSide *= gasket_gear_gap;
+
+                        scaledVector_furtherSide.Unitize();
+                        scaledVector_furtherSide *= (gasket_gear_gap + bottom_gasket_gear_height);
+
+
+                        point1 += scaledVector_closerSide;
+                        point2 += scaledVector_furtherSide;
+
+                        Curve intermediate_gear_bottom_gasket_rail = new Line(point1, point2).ToNurbsCurve();
+                        Brep intermediate_gear_bottom_gasket = Brep.CreateThickPipe(intermediate_gear_bottom_gasket_rail, gasket_inner_radius, gasket_outer_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                        point3 = intermediate_gear_bottom_gasket_rail.PointAtLength(intermediate_gear_bottom_gasket_rail.GetLength() / 2);
+                        Circle intermediate_gear_bottom_gasket_circle = new Circle(new Plane(point3, intermediate_gear_bottom_gasket_rail.TangentAtStart), (gasket_outer_radius + gasket_inner_radius) / 2);
+
+                        intermediate_gear_bottom_gaskets.Add(intermediate_gear_bottom_gasket);
+                        intermediate_gear_bottom_gaskets_circles.Add(intermediate_gear_bottom_gasket_circle);
+                        allGaskets.Add(intermediate_gear_bottom_gasket);
                     }
                     #endregion
 
 
-                    #region spur gear top gaskets
+                    #region intermediate gear shaft
+                    List <Brep> intermediate_gear_shafts = new List<Brep>();
 
-
-                    #endregion
-
-                    #region  first bevel gear bottom gaskets
-
-
-                    #endregion
-
-                    #region  second bevel gear top gaskets
-
-
-                    #endregion
-
-                    #region  connect gear bottom gaskets
-
-
-                    #endregion
-
-                    #region  intermediate gear top gaskets
-
-
-                    #endregion
-
-                    #region  intermediate gear bottom gaskets
-
-
-                    #endregion
-
+                    foreach(var gear in intermediates_gears)
+                    {
+                        shaft_line = new Line(gear.TopPoint, gear.BottomPoint).ToNurbsCurve().Extend(CurveEnd.Both, shaft_extends_from_gear, CurveExtensionStyle.Arc);
+                        Brep intermediate_gear_shaft = Brep.CreatePipe(shaft_line, shaft_radius, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                        intermediate_gear_shafts.Add(intermediate_gear_shaft);
+                        allShafts.Add(intermediate_gear_shaft);
+                    }
+                    #endregion 
 
                     #region check for intersection
+                    //Check intersection for every single generated item with the currModel
+                    foreach(var brep in allShafts)
+                    {
+                        Intersection.BrepBrep(brep, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
+                        if(intersectionCurves!=null && intersectionCurves.Length > 0)
+                        {
+                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
+                            return;
+                        }
+                    }
+
+                    foreach (var brep in allGaskets)
+                    {
+                        Intersection.BrepBrep(brep, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+
+                        if (intersectionCurves != null && intersectionCurves.Length > 0)
+                        {
+                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
+                            return;
+                        }
+                    }
+
+                    foreach (var brep in allGears)
+                    {
+                        Intersection.BrepBrep(brep, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+
+                        if (intersectionCurves != null && intersectionCurves.Length > 0)
+                        {
+                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
+                            return;
+                        }
+                    }
                     #endregion
 
+
+                    myDoc.Objects.AddPoint(first_bevel_gear.TopPoint, lightGuideAttribute);
+                    myDoc.Objects.AddPoint(first_bevel_gear.BottomPoint, soluableAttribute);
+                    myDoc.Objects.AddPoint(spur_gear.TopPoint, lightGuideAttribute);
+                    myDoc.Objects.AddPoint(spur_gear.BottomPoint, soluableAttribute);
                     myDoc.Objects.Add(rack.Model);
                     myDoc.Objects.Add(spur_gear.Model);
                     myDoc.Objects.Add(first_bevel_gear.Model);
@@ -668,11 +891,30 @@ namespace DynaModel_v2.Translational_Motion
                     myDoc.Objects.Add(connector_gear.Model);
                     myDoc.Objects.Add(connector_shaft);
                     myDoc.Objects.Add(start_gear.Model);
+                    myDoc.Objects.Add(spur_gear_bottom_gasket);
+                    myDoc.Objects.Add(first_bevel_gear_top_gasket);
+                    myDoc.Objects.Add(second_bevel_gear_top_gasket);
+                    myDoc.Objects.Add(connector_gear_bottom_gasket);
 
-                    foreach(var intermediate_gear in intermediates_gears)
+                    foreach (var gasket in intermediate_gear_top_gaskets)
+                        myDoc.Objects.Add(gasket);
+                    foreach (var gasket in intermediate_gear_bottom_gaskets)
+                        myDoc.Objects.Add(gasket);
+                    foreach (var intermediate_gear_shaft in intermediate_gear_shafts)
+                        myDoc.Objects.Add(intermediate_gear_shaft);
+
+
+                    foreach (var intermediate_gear in intermediates_gears)
                     {
                         myDoc.Objects.Add(intermediate_gear.Model);
                     }
+
+                    DA.SetData(0, false);
+                    Item savedItem = new Item();
+                    savedItem.Name = "Translational Motion";
+                    savedItem.Description = "Nnsaved";
+                    savedItem.gearEssentials = essentials;
+                    DA.SetData(1, savedItem);
 
                     TrueOnlyButtonValueController_Translational.finished = 1;
                 }

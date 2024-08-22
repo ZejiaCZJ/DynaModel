@@ -36,6 +36,8 @@ namespace DynaModel_v2
             private Vector3d _x_original_direction = new Vector3d(1, 0, 0);
 
             private Point3d _centerPoint = Point3d.Unset;
+            private Point3d _topPoint = Point3d.Unset; //Top Center point of the gear
+            private Point3d _bottomPoint = Point3d.Unset; //Bottom Center point of the gear
             private Vector3d _direction = Vector3d.Unset; //The direction of the gear face
             private Boolean _twoLayer = false;
             private List<Vector3d> teethDirections = new List<Vector3d>();
@@ -79,6 +81,9 @@ namespace DynaModel_v2
 
             private List<Curve> Curves = new List<Curve>();
             public List<Curve> CURVES { get => Curves; }
+
+            public Point3d TopPoint { get => _topPoint; protected set => _topPoint = value; }
+            public Point3d BottomPoint { get => _bottomPoint; protected set => _bottomPoint = value; }
 
             public SpurGear(Point3d center_point, Vector3d gear_direction, Vector3d gear_x_dir, int teethNum, double mod, double pressure_angle, double Thickness, double selfRotAngle, bool movable)
             {
@@ -365,6 +370,8 @@ namespace DynaModel_v2
 
                 base.Model = gearSolid;
                 _boundingBox = base.Model.GetBoundingBox(true);
+                _topPoint = new Point3d(_boundingBox.Center.X, _boundingBox.Center.Y, _boundingBox.Max.Z);
+                _bottomPoint = new Point3d(_boundingBox.Center.X, _boundingBox.Center.Y, _boundingBox.Min.Z);
                 Point3d max = new Point3d(_boundingBox.Max.X + 1, _boundingBox.Max.Y + 1, _boundingBox.Max.Z + 3);
                 Point3d min = new Point3d(_boundingBox.Min.X - 1, _boundingBox.Min.Y - 1, _boundingBox.Min.Z - 2);
                 _boundingBox_big = new BoundingBox(min, max).ToBrep();
@@ -378,6 +385,8 @@ namespace DynaModel_v2
                     _boundingBox.Transform(centerTrans);
                     _boundingBox_big.Transform(centerTrans);
                     _x_original_direction.Transform(centerTrans);
+                    _topPoint.Transform(centerTrans);
+                    _bottomPoint.Transform(centerTrans);
 
                     for (int i = 0; i < teethTips.Count(); i++)
                     {
@@ -424,6 +433,8 @@ namespace DynaModel_v2
                     base.BaseCurve.Transform(centerRotate1);
                     _boundingBox.Transform(centerRotate1);
                     _boundingBox_big.Transform(centerRotate1);
+                    _topPoint.Transform(centerRotate);
+                    _bottomPoint.Transform(centerRotate);
                     for (int i = 0; i < teethTips.Count(); i++)
                     {
                         Point3d p = teethTips[i];
