@@ -33,6 +33,7 @@ namespace DynaModel_v2.Geometry
         private List<Point3d> TeethBtms = new List<Point3d>();
         private Brep _boundingBox = new Brep();
         private Point3d _boundingBoxCenter = new Point3d();
+        private Line _realBackBone = Line.Unset;
 
         RhinoDoc myDoc = RhinoDoc.ActiveDoc;
 
@@ -59,6 +60,8 @@ namespace DynaModel_v2.Geometry
         public Vector3d ExtrudeDirection { get => _extrudeDirection; private set => _extrudeDirection = value; }
         public Brep BoundingBox { get => _boundingBox; private set => _boundingBox = value; }
         public Point3d BoundingBoxCenter { get => _boundingBoxCenter; private set => _boundingBoxCenter = value; }
+
+        public Line RealBackBone { get => _realBackBone; set => _realBackBone = value; }
         /// <summary>
         /// 
         /// </summary>
@@ -253,10 +256,17 @@ namespace DynaModel_v2.Geometry
                 base.BaseCurve.Transform(rotat0);
                 _extrudeDirection.Transform(rotat0);
                 _faceDirection.Transform(rotat0);
+                _boundingBoxCenter.Transform(rotat0);
+                _boundingBox.Transform(rotat0);
 
                 line = new Line(_boundingBoxCenter, _faceDirection, 10).ToNurbsCurve();
                 count++;
             }
+
+            _realBackBone = _backBone;
+            trans0 = Transform.Translation((_boundingBoxCenter - _backBone.PointAtLength(_backBone.Length / 2)));
+            _realBackBone.Transform(trans0);
+
         }
 
 

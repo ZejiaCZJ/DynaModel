@@ -1555,7 +1555,7 @@ namespace DynaModel_v2.Final_Stage
 
             #region Rack
             //1. Get the center point of the rack, we assume the rack's length will be constant
-            double rack_length = 40;
+            double rack_length = 60;
             endEffector_rail = new Line(pointConnection1, Vector3d.Negate(rackLineDirection), rack_length / 2);
             Point3d rack_center_point = endEffector_rail.To;
 
@@ -1571,14 +1571,19 @@ namespace DynaModel_v2.Final_Stage
             #region Rack Holder
             Line rack_holder_line = new Line(rack.BoundingBoxCenter, rackLineDirection, 10);
             Curve rack_holder_curve = rack_holder_line.ToNurbsCurve();
+            rack_holder_curve = rack_holder_curve.Extend(CurveEnd.End, 10, CurveExtensionStyle.Arc);
+            rack_holder_curve = rack_holder_curve.Trim(CurveEnd.Start, 10);
+            Circle rack_holder_circle = new Circle(new Plane(rack_holder_curve.PointAtLength(rack_holder_curve.GetLength() / 2), rackLineDirection), (6 + 10) / 2);
+            myDoc.Objects.Add(rack_holder_circle.ToNurbsCurve());
             Brep rack_holder = Brep.CreateThickPipe(rack_holder_curve, 6, 10, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
             allGaskets.Add(rack_holder);
             #endregion
 
             #region  Adjust rack to extend to end effector
-            Line rack_backBone = new Line(rack.EndPoint, rack.RackDirection, 1);
+            Line rack_backBone = new Line(rack.RealBackBone.To, rack.RackDirection, 1);
             Curve rack_backBone_curve = rack_backBone.ToNurbsCurve().Extend(CurveEnd.End, CurveExtensionStyle.Line, new[] { endEffector_Hollowed });
             rack_backBone_curve = rack_backBone_curve.Extend(CurveEnd.End, 2, CurveExtensionStyle.Line);
+            rack_backBone_curve = rack_backBone_curve.Extend(CurveEnd.Start, 1, CurveExtensionStyle.Line);
             Brep rack_extension = null;
             if(rack_backBone_curve != null)
             {
@@ -1624,13 +1629,13 @@ namespace DynaModel_v2.Final_Stage
             #region first bevel gear
             double shaft_length = 30;
             if (bevel_gear_coneAngle <= 100)
-                shaft_length = 20;
+                shaft_length = 10;
 
             //Generate a bevel gear that connects to the spur gear and the shaft between them
             Curve shaft_line = new Line(spur_gear.CenterPoint, spur_gear_direction, shaft_length).ToNurbsCurve();
 
             Vector3d first_bevel_gear_direction = spur_gear_direction;
-            int first_bevel_gear_teeth_num = 18;
+            int first_bevel_gear_teeth_num = 15;
             bool isReversed = false;
             if (bevel_gear_coneAngle > 100)
             {
@@ -2074,121 +2079,121 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             #region check for intersection
-            if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 5)
-            {
-                RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack and initial gear are too close to each other");
-                RollBack();
-                return false;
-            }
+            //if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 5)
+            //{
+            //    RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack and initial gear are too close to each other");
+            //    RollBack();
+            //    return false;
+            //}
 
-            //Check intersection for every single generated item with the currModel
-            foreach (var brep in allShafts)
-            {
-                Intersection.BrepBrep(brep, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            ////Check intersection for every single generated item with the currModel
+            //foreach (var brep in allShafts)
+            //{
+            //    Intersection.BrepBrep(brep, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                if (intersectionCurves != null && intersectionCurves.Length > 0)
-                {
-                    RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one shaft is intersected with the model");
-                    RollBack();
-                    return false;
-                }
-            }
+            //    if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //    {
+            //        RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one shaft is intersected with the model");
+            //        RollBack();
+            //        return false;
+            //    }
+            //}
 
-            foreach (var brep in allGears)
-            {
-                Intersection.BrepBrep(brep, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            //foreach (var brep in allGears)
+            //{
+            //    Intersection.BrepBrep(brep, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                if (intersectionCurves != null && intersectionCurves.Length > 0)
-                {
-                    RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gear is intersected with the model");
-                    RollBack();
-                    return false;
-                }
-            }
+            //    if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //    {
+            //        RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gear is intersected with the model");
+            //        RollBack();
+            //        return false;
+            //    }
+            //}
 
-            //Check intersection between gears
-            for (int i = 0; i < allGears.Count; i++)
-            {
-                for (int j = i; i < allGears.Count; j++)
-                {
-                    Intersection.BrepBrep(allGears[i], allGears[j], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            ////Check intersection between gears
+            //for (int i = 0; i < allGears.Count; i++)
+            //{
+            //    for (int j = i; i < allGears.Count; j++)
+            //    {
+            //        Intersection.BrepBrep(allGears[i], allGears[j], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                    if (intersectionCurves != null && intersectionCurves.Length > 0)
-                    {
-                        RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting");
-                        RollBack();
-                        return false;
-                    }
-                }
-            }
+            //        if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //        {
+            //            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting");
+            //            RollBack();
+            //            return false;
+            //        }
+            //    }
+            //}
 
-            Intersection.BrepBrep(first_bevel_gear.Model, rack_holder, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-            if (intersectionCurves != null && intersectionCurves.Length > 0)
-            {
-                RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting with rack holder");
-                RollBack();
-                return false;
-            }
+            //Intersection.BrepBrep(first_bevel_gear.Model, rack_holder, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            //if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //{
+            //    RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting with rack holder");
+            //    RollBack();
+            //    return false;
+            //}
 
-            Intersection.BrepBrep(second_bevel_gear.Model, rack_holder, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-            if (intersectionCurves != null && intersectionCurves.Length > 0)
-            {
-                RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting with rack holder");
-                RollBack();
-                return false;
-            }
+            //Intersection.BrepBrep(second_bevel_gear.Model, rack_holder, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            //if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //{
+            //    RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: gears are intersecting with rack holder");
+            //    RollBack();
+            //    return false;
+            //}
 
-            allBreps = getAllBreps();
+            //allBreps = getAllBreps();
 
-            for (int i = 0; i < allBreps.Count; i++)
-            {
-                foreach (var gear in allGears)
-                {
-                    Intersection.BrepBrep(gear, allBreps[i], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            //for (int i = 0; i < allBreps.Count; i++)
+            //{
+            //    foreach (var gear in allGears)
+            //    {
+            //        Intersection.BrepBrep(gear, allBreps[i], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                    if (intersectionCurves != null && intersectionCurves.Length > 0)
-                    {
-                        RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gear intersect other parameters");
-                        RollBack();
-                        return false;
-                    }
-                }
+            //        if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //        {
+            //            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gear intersect other parameters");
+            //            RollBack();
+            //            return false;
+            //        }
+            //    }
 
-                foreach (var s in allShafts)
-                {
-                    Intersection.BrepBrep(s, allBreps[i], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            //    foreach (var s in allShafts)
+            //    {
+            //        Intersection.BrepBrep(s, allBreps[i], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                    if (intersectionCurves != null && intersectionCurves.Length > 0)
-                    {
-                        RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one shaft intersect other parameters");
-                        RollBack();
-                        return false;
-                    }
-                }
+            //        if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //        {
+            //            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one shaft intersect other parameters");
+            //            RollBack();
+            //            return false;
+            //        }
+            //    }
 
-                foreach (var s in allGaskets)
-                {
-                    Intersection.BrepBrep(s, allBreps[i], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+            //    foreach (var s in allGaskets)
+            //    {
+            //        Intersection.BrepBrep(s, allBreps[i], myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                    if (intersectionCurves != null && intersectionCurves.Length > 0)
-                    {
-                        RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gasket intersect other parameters");
-                        RollBack();
-                        return false;
-                    }
-                }
-            }
+            //        if (intersectionCurves != null && intersectionCurves.Length > 0)
+            //        {
+            //            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gasket intersect other parameters");
+            //            RollBack();
+            //            return false;
+            //        }
+            //    }
+            //}
 
 
 
             #endregion
-
+            Guid rack_holder_guid = myDoc.Objects.Add(rack_holder);
             specialPipes.Add(myDoc.Objects.Add(rack.Model));
             specialPipes.Add(myDoc.Objects.Add(spur_gear.Model));
             specialPipes.Add(myDoc.Objects.Add(first_bevel_gear.Model));
             specialPipes.Add(myDoc.Objects.Add(shaft));
             myDoc.Objects.Add(second_bevel_gear.Model);
-            specialPipes.Add(myDoc.Objects.Add(rack_holder));
+            specialPipes.Add(rack_holder_guid);
             myDoc.Objects.Add(connector_gear.Model);
             myDoc.Objects.Add(connector_shaft);
             myDoc.Objects.Add(start_gear.Model);
@@ -2204,6 +2209,7 @@ namespace DynaModel_v2.Final_Stage
                 myDoc.Objects.Add(intermediate_gear.Model);
             }
 
+            gasketCircles.Add(rack_holder_circle.ToNurbsCurve());
             gasketCircles.Add(spur_gear_bottom_gasket_circle.ToNurbsCurve());
             gasketCircles.Add(first_bevel_gear_top_gasket_circle.ToNurbsCurve());
             gasketCircles.Add(second_bevel_gear_top_gasket_circle.ToNurbsCurve());
@@ -2213,6 +2219,7 @@ namespace DynaModel_v2.Final_Stage
             foreach (var circles in intermediate_gear_bottom_gaskets_circles)
                 gasketCircles.Add(circles.ToNurbsCurve());
 
+            gaskets_guid.Add(rack_holder_guid);
             gaskets_guid.Add(myDoc.Objects.Add(spur_gear_bottom_gasket));
             gaskets_guid.Add(myDoc.Objects.Add(first_bevel_gear_top_gasket));
             gaskets_guid.Add(myDoc.Objects.Add(second_bevel_gear_top_gasket));

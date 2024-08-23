@@ -839,7 +839,7 @@ namespace DynaModel_v2.Translational_Motion
 
                     if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 7.5)
                     {
-                        RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector.");
+                        RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack is too close to initial gear");
                         Cancel();
                         return;
                     }
@@ -851,7 +851,7 @@ namespace DynaModel_v2.Translational_Motion
 
                         if (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
-                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
+                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one shaft intersects with the model");
                             return;
                         }
                     }
@@ -862,7 +862,7 @@ namespace DynaModel_v2.Translational_Motion
 
                         if (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
-                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
+                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gasket intersects with the model");
                             return;
                         }
                     }
@@ -873,7 +873,7 @@ namespace DynaModel_v2.Translational_Motion
 
                         if (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
-                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
+                            RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector: one gear intersects with the model");
                             return;
                         }
                     }
