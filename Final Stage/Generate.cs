@@ -299,7 +299,7 @@ namespace DynaModel_v2.Final_Stage
                     Guid a = myDoc.Objects.Add(mainPipePairs[i], generateHelper.soluableAttribute);
                 }
 
-
+                myDoc.Objects.Add(generateHelper.foundation);
             }
         }
 
