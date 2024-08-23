@@ -388,17 +388,45 @@ namespace DynaModel_v2.Geometry
 
             List<Brep> faces = new List<Brep>();
             faces.Add(model);
-            faces.AddRange(toothFace);
             faces.Add(gearBottomFace);
 
+            //Brep[] models = Brep.CreateSolid(faces, mydoc.ModelAbsoluteTolerance);
+            Brep[] models = Brep.JoinBreps(faces, mydoc.ModelAbsoluteTolerance);
             
-            Brep[] models = Brep.CreateSolid(faces, mydoc.ModelAbsoluteTolerance);
-            if(models != null && models.Length > 0)
+            if (models != null && models.Length > 0)
+            {
                 model = models[0];
+                model = model.CapPlanarHoles(mydoc.ModelAbsoluteTolerance);
+                if(model == null)
+                {
+                    //Try other method, fail if this method doesn't work
+                    faces.AddRange(toothFace);
+                    models = Brep.CreateSolid(faces, mydoc.ModelAbsoluteTolerance);
+                    if (models != null && models.Length > 0)
+                        model = models[0];
+                    else
+                    {
+                        RhinoApp.WriteLine("Unable to create a gear given the provided information");
+                        foreach (var face in faces)
+                            mydoc.Objects.Add(face);
+                        return;
+                    }
+                }
+            }
             else
             {
-                RhinoApp.WriteLine("Unable to create a gear given the provided information");
-                return;
+                //Try other method, fail if this method doesn't work
+                faces.AddRange(toothFace);
+                models = Brep.CreateSolid(faces, mydoc.ModelAbsoluteTolerance);
+                if (models != null && models.Length > 0)
+                    model = models[0];
+                else
+                {
+                    RhinoApp.WriteLine("Unable to create a gear given the provided information");
+                    foreach (var face in faces)
+                        mydoc.Objects.Add(face);
+                    return;
+                }
             }
 
             //Cut the model into the shape we want

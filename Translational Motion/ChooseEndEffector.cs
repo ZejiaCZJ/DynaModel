@@ -403,7 +403,7 @@ namespace DynaModel_v2.Translational_Motion
                     SpurGear spur_gear = new SpurGear(spur_gear_center_point, spur_gear_direction, spur_gear_x_dir, teeth_num, module, pressure_angle, thickness, selfRotAngle, false);
 
                     //Get right center point such that the gear and the rack are perfectly away from each other
-                    rackFaceDirection = (module + spur_gear.TipRadius) * rackFaceDirection;
+                    rackFaceDirection = (module + spur_gear.TipRadius) * rack.FaceDirection;
                     spur_gear_center_point = spur_gear_center_point + rackFaceDirection;
 
                     spur_gear = new SpurGear(spur_gear_center_point, spur_gear_direction, spur_gear_x_dir, teeth_num, module, pressure_angle, thickness, selfRotAngle, false);
@@ -428,6 +428,7 @@ namespace DynaModel_v2.Translational_Motion
 
                     //Generate a bevel gear that connects to the spur gear and the shaft between them
                     Curve shaft_line = new Line(spur_gear.CenterPoint, spur_gear_direction, shaft_length).ToNurbsCurve();
+                    myDoc.Objects.AddLine(new Line(spur_gear.CenterPoint, spur_gear_direction, shaft_length));
 
                     Vector3d first_bevel_gear_direction = spur_gear_direction;
                     int first_bevel_gear_teeth_num = 18;
@@ -510,13 +511,6 @@ namespace DynaModel_v2.Translational_Motion
                     //RhinoApp.WriteLine($"First driven gear rotated {RhinoMath.ToDegrees(Vector3d.VectorAngle(new Vector3d(rail5.Direction.X, rail5.Direction.Y, 0), new Vector3d(1, 0, 0)))} degrees");
                     double second_bevel_gear_coneAngle = bevel_gear_coneAngle;
                     BevelGear second_bevel_gear = new BevelGear(second_bevel_gear_centerPoint, second_bevel_gear_Direction, second_bevel_gear_xDir, second_bevel_gear_teethNum, module, pressure_angle, thickness, second_bevel_gear_selfRotAngle, second_bevel_gear_coneAngle, false);
-
-                    if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 7.5)
-                    {
-                        RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector.");
-                        Cancel();
-                        return;
-                    }
 
                     allGears.Add(second_bevel_gear.Model);
                     #endregion
@@ -842,12 +836,20 @@ namespace DynaModel_v2.Translational_Motion
                     #endregion 
 
                     #region check for intersection
+
+                    if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 7.5)
+                    {
+                        RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector.");
+                        Cancel();
+                        return;
+                    }
+
                     //Check intersection for every single generated item with the currModel
-                    foreach(var brep in allShafts)
+                    foreach (var brep in allShafts)
                     {
                         Intersection.BrepBrep(brep, mainModel, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
 
-                        if(intersectionCurves!=null && intersectionCurves.Length > 0)
+                        if (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
                             RhinoApp.WriteLine("Fail to generate a translational motion parameter with this end effector");
                             return;
@@ -953,7 +955,7 @@ namespace DynaModel_v2.Translational_Motion
 
 
 
-            if (numTeeth <= 10)
+            if (numTeeth > 5 && numTeeth <= 10)
                 return (1, numTeeth);
             else if (numTeeth < 30 && numTeeth > 10)
             {

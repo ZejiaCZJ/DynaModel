@@ -91,6 +91,9 @@ namespace DynaModel_v2.SharedData
                 else 
                 {
                     myDoc.Objects.Add(planarSurface);
+                    foreach (var curve1 in intersectionCurves)
+                        myDoc.Objects.Add(curve1);
+                    myDoc.Objects.Add(currModel_Hollowed);
                     RhinoApp.WriteLine("The model's base is not planar. This software only support models that're planar at their base");
                     return;
                 }
@@ -100,8 +103,20 @@ namespace DynaModel_v2.SharedData
                 planarSurface = Brep.CreatePlanarBreps(new[] { circle.ToNurbsCurve() }, myDoc.ModelAbsoluteTolerance)[0];
                 //myDoc.Objects.Add(planarSurface);
                 Intersection.BrepBrep(planarSurface, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoint);
+                
                 if (GetLongestCurve(intersectionCurves, out Curve curve))
-                    planarSurface = Brep.CreatePlanarBreps(new[] { curve }, myDoc.ModelAbsoluteTolerance)[0];
+                {
+                    if(curve.IsClosed)
+                        planarSurface = Brep.CreatePlanarBreps(new[] { curve }, myDoc.ModelAbsoluteTolerance)[0];
+                    else
+                    {
+                        myDoc.Objects.Add(planarSurface);
+                        foreach (var curve1 in intersectionCurves)
+                            myDoc.Objects.Add(curve1);
+                        myDoc.Objects.Add(currModel_Hollowed);
+                    }
+                }
+                    
 
                 Brep currModel;
                 Brep[] union = Brep.CreateBooleanUnion(new[] { currModel_Hollowed, planarSurface }, myDoc.ModelAbsoluteTolerance, true);

@@ -1603,7 +1603,7 @@ namespace DynaModel_v2.Final_Stage
             SpurGear spur_gear = new SpurGear(spur_gear_center_point, spur_gear_direction, spur_gear_x_dir, teeth_num, module, pressure_angle, thickness, selfRotAngle, false);
 
             //Get right center point such that the gear and the rack are perfectly away from each other
-            rackFaceDirection = (module + spur_gear.TipRadius) * rackFaceDirection;
+            rackFaceDirection = (module + spur_gear.TipRadius) * rack.FaceDirection;
             spur_gear_center_point = spur_gear_center_point + rackFaceDirection;
 
             spur_gear = new SpurGear(spur_gear_center_point, spur_gear_direction, spur_gear_x_dir, teeth_num, module, pressure_angle, thickness, selfRotAngle, false);
@@ -1710,12 +1710,7 @@ namespace DynaModel_v2.Final_Stage
             double second_bevel_gear_coneAngle = bevel_gear_coneAngle;
             BevelGear second_bevel_gear = new BevelGear(second_bevel_gear_centerPoint, second_bevel_gear_Direction, second_bevel_gear_xDir, second_bevel_gear_teethNum, module, pressure_angle, thickness, second_bevel_gear_selfRotAngle, second_bevel_gear_coneAngle, false);
 
-            if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 5)
-            {
-                RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack and initial gear are too close to each other");
-                RollBack();
-                return false;
-            }
+          
 
             allGears.Add(second_bevel_gear.Model);
             #endregion
@@ -2079,6 +2074,13 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             #region check for intersection
+            if (second_bevel_gear_centerPoint.Z < start_gear.CenterPoint.Z + 5)
+            {
+                RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack and initial gear are too close to each other");
+                RollBack();
+                return false;
+            }
+
             //Check intersection for every single generated item with the currModel
             foreach (var brep in allShafts)
             {
@@ -3513,7 +3515,7 @@ namespace DynaModel_v2.Final_Stage
 
 
 
-            if (numTeeth <= 10)
+            if (numTeeth > 5 && numTeeth <= 10)
                 return (1, numTeeth);
             else if (numTeeth < 30 && numTeeth > 10)
             {

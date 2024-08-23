@@ -239,6 +239,24 @@ namespace DynaModel_v2.Geometry
                 p.Transform(selfRotate);
                 TeethBtms[i] = p;
             }
+
+            //Rotate the rack so that it points upward in the best effort
+            rotat0 = Transform.Rotation(RhinoMath.ToRadians(1), _rackDirection, _backBone.PointAtLength(_backBone.Length / 2));
+
+            Curve line = new Line(_boundingBoxCenter, _faceDirection, 10).ToNurbsCurve();
+            double maxZ = line.PointAtEnd.Z;
+            int count = 0;
+            while (maxZ <= line.PointAtEnd.Z && count < 361)
+            {
+                maxZ = line.PointAtEnd.Z;
+                base.Model.Transform(rotat0);
+                base.BaseCurve.Transform(rotat0);
+                _extrudeDirection.Transform(rotat0);
+                _faceDirection.Transform(rotat0);
+
+                line = new Line(_boundingBoxCenter, _faceDirection, 10).ToNurbsCurve();
+                count++;
+            }
         }
 
 
