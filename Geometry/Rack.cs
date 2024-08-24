@@ -172,6 +172,20 @@ namespace DynaModel_v2.Geometry
 
         }
 
+        protected void ModifyRack()
+        {
+            BoundingBox bBox = base.Model.GetBoundingBox(true);
+
+            Point3d minPoint = new Point3d(bBox.Max.X, bBox.Min.Y, bBox.Min.Z - 3);
+            Point3d maxPoint = new Point3d(bBox.Min.X, bBox.Min.Y, bBox.Max.Z + 3);
+            Plane plane = new Plane(new Point3d((bBox.Max.X - bBox.Min.X) / 2, bBox.Min.Y, (bBox.Max.Z - bBox.Min.Z) / 2), new Vector3d(0, 1, 0));
+            Rectangle3d rectangle = new Rectangle3d(plane, minPoint, maxPoint);
+            Extrusion rackBase_extrusion = Extrusion.Create(rectangle.ToNurbsCurve(), 1, true);
+            Brep rackBase = rackBase_extrusion.ToBrep();
+            Brep[] union = Brep.CreateBooleanUnion(new[] { base.Model, rackBase }, myDoc.ModelAbsoluteTolerance);
+
+            base.Model = union[0];
+        }
 
         protected void GenerateRack()
         {
@@ -198,6 +212,7 @@ namespace DynaModel_v2.Geometry
             _boundingBox = base.Model.GetBoundingBox(true).ToBrep();
             _boundingBoxCenter = base.Model.GetBoundingBox(true).Center;
 
+            ModifyRack();
 
             Point3d baseMidPt = new Point3d(_length / 2, 0, 0);
             Point3d midPoint = (_startPoint + _endPoint) / 2;
