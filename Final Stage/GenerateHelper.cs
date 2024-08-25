@@ -52,7 +52,7 @@ namespace DynaModel_v2.Final_Stage
         Point3d pcb_origin;
         Point3d pcb_center;
         public List<Brep> toDelete = new List<Brep>();
-        private List<Guid> specialPipes = new List<Guid>(); //Shafts that is not vertical or horizontal
+        private List<Guid> specialPipes = new List<Guid>(); //Shafts that is not vertical nor horizontal
 
 
         //Gear parameter
@@ -77,8 +77,9 @@ namespace DynaModel_v2.Final_Stage
         public List<Guid> gaskets_guid = new List<Guid>();
         public List<Curve> rack_holder_curves = new List<Curve>();
         public List<Guid> rack_holder_guids = new List<Guid>();
-        public List<Brep> conductive_pipes = new List<Brep>();
+        public List<Brep> conductive_pipes = new List<Brep>(); //Conductive Pipes that the support pillars can connect onto
         public List<Guid> conductive_pipes_guid = new List<Guid>();
+
 
 
 
@@ -90,12 +91,12 @@ namespace DynaModel_v2.Final_Stage
         private List<Guid> allTempBoxesGuid= new List<Guid>();
         private List<PipeExit> ledPipeExitPts = new List<PipeExit>();
         private List<Curve> combinableLightPipeRoute = new List<Curve>();
-        private List<Brep> combinableLightPipe = new List<Brep>();
+        private List<Brep> combinableLightPipe = new List<Brep>(); //A copy of the light pipe that air pipe and conductive pipe can use as a part of their route
         private List<InViewObject> conductiveObjects = new List<InViewObject>();
-        public List<Brep> led_pipes = new List<Brep>();
+        public List<Brep> led_pipes = new List<Brep>(); //Led Light pipes that the support pillars can connect onto
         public List<Guid> led_pipes_guid = new List<Guid>();
-        public List<(Brep, Brep)> lightSourcePipePairs = new List<(Brep, Brep)>();
-        public List<Brep> mainPipePairs = new List<Brep>();
+        public List<(Brep, Brep)> lightSourcePipePairs = new List<(Brep, Brep)>(); //The pairs of pipe that cover light source and its clearance, this is for cases that one light source is used by multiple led light pipe
+        public List<Brep> mainPipePairs = new List<Brep>(); //The clearance of the main body of led light pipe
         public double led_pipe_inner_radius = 4.9;
         public double led_pipe_outer_radius = 5.5;
 
