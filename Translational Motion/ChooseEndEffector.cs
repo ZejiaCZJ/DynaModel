@@ -382,10 +382,8 @@ namespace DynaModel_v2.Translational_Motion
                     #region Rack Holder
                     //myDoc.Objects.Add(rack.BoundingBox.ToBrep());
                     //myDoc.Objects.AddPoint(rack.BoundingBoxCenter);
-                    Line rack_holder_line = new Line(rack.BoundingBoxCenter, rackLineDirection, 10);
-                    Curve rack_holder_curve = rack_holder_line.ToNurbsCurve();
-                    Brep rack_holder = Brep.CreateThickPipe(rack_holder_curve, 6, 10, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
-                    allGaskets.Add(rack_holder);
+                    Brep rack_holder = rack.RackHolder;
+                    //allGaskets.Add(rack_holder);
                     #endregion
 
 

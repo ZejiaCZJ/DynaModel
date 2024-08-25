@@ -75,6 +75,8 @@ namespace DynaModel_v2.Final_Stage
         private static double top_gasket_gear_height = 3;
         public List<Curve> gasketCircles = new List<Curve>();
         public List<Guid> gaskets_guid = new List<Guid>();
+        public List<Curve> rack_holder_curves = new List<Curve>();
+        public List<Guid> rack_holder_guids = new List<Guid>();
         public List<Brep> conductive_pipes = new List<Brep>();
         public List<Guid> conductive_pipes_guid = new List<Guid>();
 
@@ -1569,13 +1571,13 @@ namespace DynaModel_v2.Final_Stage
             #endregion
 
             #region Rack Holder
-            Line rack_holder_line = new Line(rack.BoundingBoxCenter, rackLineDirection, 18);
-            Curve rack_holder_curve = rack_holder_line.ToNurbsCurve();
-            rack_holder_curve = rack_holder_curve.Extend(CurveEnd.End, 7, CurveExtensionStyle.Arc);
-            rack_holder_curve = rack_holder_curve.Trim(CurveEnd.Start, 7);
-            Circle rack_holder_circle = new Circle(new Plane(rack_holder_curve.PointAtLength(rack_holder_curve.GetLength() / 2), rackLineDirection), (6 + 10) / 2);
-            myDoc.Objects.Add(rack_holder_circle.ToNurbsCurve());
-            Brep rack_holder = Brep.CreateThickPipe(rack_holder_curve, 6, 10, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            //Line rack_holder_line = new Line(rack.BoundingBoxCenter, rackLineDirection, 18);
+            //Curve rack_holder_curve = rack_holder_line.ToNurbsCurve();
+            //rack_holder_curve = rack_holder_curve.Extend(CurveEnd.End, 7, CurveExtensionStyle.Arc);
+            //rack_holder_curve = rack_holder_curve.Trim(CurveEnd.Start, 7);
+            //Circle rack_holder_circle = new Circle(new Plane(rack_holder_curve.PointAtLength(rack_holder_curve.GetLength() / 2), rackLineDirection), (6 + 10) / 2);
+            //Brep rack_holder = Brep.CreateThickPipe(rack_holder_curve, 6, 10, true, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+            Brep rack_holder = rack.RackHolder;
             Brep[] differences = Brep.CreateBooleanDifference(rack_holder, currModel_Hollowed, myDoc.ModelAbsoluteTolerance);
             GetSimilarVolumeBrep(differences, rack_holder, out rack_holder);
             allGaskets.Add(rack_holder);
@@ -2211,26 +2213,29 @@ namespace DynaModel_v2.Final_Stage
                 myDoc.Objects.Add(intermediate_gear.Model);
             }
 
-            //gasketCircles.Add(rack_holder_circle.ToNurbsCurve());
-            //gasketCircles.Add(spur_gear_bottom_gasket_circle.ToNurbsCurve());
-            //gasketCircles.Add(first_bevel_gear_top_gasket_circle.ToNurbsCurve());
-            //gasketCircles.Add(second_bevel_gear_top_gasket_circle.ToNurbsCurve());
-            //gasketCircles.Add(connector_gear_bottom_gasket_circle.ToNurbsCurve());
-            //foreach(var circles in intermediate_gear_top_gaskets_circles)
-            //    gasketCircles.Add(circles.ToNurbsCurve());
-            //foreach (var circles in intermediate_gear_bottom_gaskets_circles)
-            //    gasketCircles.Add(circles.ToNurbsCurve());
+            gasketCircles.Add(spur_gear_bottom_gasket_circle.ToNurbsCurve());
+            gasketCircles.Add(first_bevel_gear_top_gasket_circle.ToNurbsCurve());
+            gasketCircles.Add(second_bevel_gear_top_gasket_circle.ToNurbsCurve());
+            gasketCircles.Add(connector_gear_bottom_gasket_circle.ToNurbsCurve());
+            foreach (var circles in intermediate_gear_top_gaskets_circles)
+                gasketCircles.Add(circles.ToNurbsCurve());
+            foreach (var circles in intermediate_gear_bottom_gaskets_circles)
+                gasketCircles.Add(circles.ToNurbsCurve());
 
-            //gaskets_guid.Add(rack_holder_guid);
-            //gaskets_guid.Add(myDoc.Objects.Add(spur_gear_bottom_gasket));
-            //gaskets_guid.Add(myDoc.Objects.Add(first_bevel_gear_top_gasket));
-            //gaskets_guid.Add(myDoc.Objects.Add(second_bevel_gear_top_gasket));
-            //gaskets_guid.Add(myDoc.Objects.Add(connector_gear_bottom_gasket));
-            //foreach (var gasket in intermediate_gear_top_gaskets)
-            //    gaskets_guid.Add(myDoc.Objects.Add(gasket));
-            //foreach (var gasket in intermediate_gear_bottom_gaskets)
-            //    gaskets_guid.Add(myDoc.Objects.Add(gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(spur_gear_bottom_gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(first_bevel_gear_top_gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(second_bevel_gear_top_gasket));
+            gaskets_guid.Add(myDoc.Objects.Add(connector_gear_bottom_gasket));
+            foreach (var gasket in intermediate_gear_top_gaskets)
+                gaskets_guid.Add(myDoc.Objects.Add(gasket));
+            foreach (var gasket in intermediate_gear_bottom_gaskets)
+                gaskets_guid.Add(myDoc.Objects.Add(gasket));
 
+            rack_holder_curves.Add(rack.RackHolderMiddleCurve1);
+            rack_holder_curves.Add(rack.RackHolderMiddleCurve2);
+
+            rack_holder_guids.Add(rack_holder_guid);
+            rack_holder_guids.Add(rack_holder_guid);
 
             return true;
         }
