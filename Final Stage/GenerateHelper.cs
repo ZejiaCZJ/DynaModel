@@ -101,8 +101,8 @@ namespace DynaModel_v2.Final_Stage
         public double led_pipe_outer_radius = 5.5;
 
         //Air Pipe parameter
-        public double air_pipe_inner_radius = 4.9;
-        public double air_pipe_outer_radius = 5.5;
+        public double air_pipe_inner_radius = 2;
+        public double air_pipe_outer_radius = 3;
 
         //Button parameter
         private List<PipeExit> conductivePipeExitPts = new List<PipeExit>();
@@ -1757,11 +1757,18 @@ namespace DynaModel_v2.Final_Stage
 
             List<SpurGear> intermediates_gears = new List<SpurGear>();
 
-            if (number_of_gear.Item1 == 0)
+            if (number_of_gear.Item1 == -1)
             {
                 RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack and initial gear are too close to each other");
                 RollBack();
                 return false;
+            }
+            else if(number_of_gear.Item1 == 0)
+            {
+                tips_distance = (connector_gear.CenterPoint.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius) / 2;
+                connector_gear_teethNum = getNumTeeth(tips_distance);
+
+                connector_gear = new SpurGear(connector_gear_centerPoint, connector_gear.Direction, connector_gear.X_direction, connector_gear_teethNum, module, pressure_angle, thickness, connector_gear.SelfRotAngle, false);
             }
             else
             {
@@ -3851,9 +3858,10 @@ namespace DynaModel_v2.Final_Stage
         {
             int numTeeth = getNumTeeth(tips_distance / 2);
 
+            if (numTeeth < 5)
+                return (0, 0);
 
-
-            if (numTeeth > 5 && numTeeth <= 10)
+            else if (numTeeth > 5 && numTeeth <= 10)
                 return (1, numTeeth);
             else if (numTeeth < 30 && numTeeth > 10)
             {
@@ -3868,7 +3876,7 @@ namespace DynaModel_v2.Final_Stage
                 return (3, getNumTeeth(tips_distance / 2));
             }
 
-            return (0, 0);
+            return (-1, -1);
         }
         #endregion
 
