@@ -7,6 +7,7 @@ using Grasshopper.Kernel;
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Geometry.Intersect;
+using static Rhino.DocObjects.PhysicallyBasedMaterial;
 
 namespace DynaModel_v2.Final_Stage
 {
@@ -102,6 +103,9 @@ namespace DynaModel_v2.Final_Stage
                     }
                 }
                 //RhinoDoc.ActiveDoc.Objects.Add(generateHelper.foundation);
+
+
+
 
                 // Create support pillars for gaskets
                 List<Guid> allPillars = new List<Guid>();
@@ -259,6 +263,62 @@ namespace DynaModel_v2.Final_Stage
                     }
 
                 }
+
+                List<Curve> rack_holder_curves = generateHelper.rack_holder_curves;
+                List<Guid> rack_holder_guid = generateHelper.rack_holder_guids;
+
+                for (int i = 0; i < rack_holder_curves.Count; i++)
+                {
+                    Curve curve = rack_holder_curves[i];
+
+                    Double[] points1 = curve.DivideByCount(3, false, out Point3d[] temp_points);
+
+                    int count = 0;
+
+                    foreach (var pt in points1)
+                    {
+                        Point3d point = curve.PointAt(pt);
+
+                        curve.TryGetPlane(out Plane curve_plane);
+
+                        //Vector3d direction = Vector3d.CrossProduct(curve.TangentAt(pt), Vector3d.Negate(rack.RackDirection));
+
+                        Vector3d direction = curve.TangentAt(pt);
+                        if (count == 0)
+                        {
+                            direction = Vector3d.Negate(curve.TangentAt(pt));
+                        }
+
+
+                        Curve support_pillar_rail = new Line(point, direction, 1).ToNurbsCurve();
+
+                        support_pillar_rail = support_pillar_rail.ExtendByLine(CurveEnd.End, new[] { generateHelper.currModel_Hollowed });
+
+                        Brep supportPillar = Brep.CreatePipe(support_pillar_rail.ToNurbsCurve(), 1, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+
+                        Brep[] breps = Brep.CreateBooleanDifference(supportPillar, generateHelper.currModel_Hollowed, myDoc.ModelAbsoluteTolerance, false);
+                        if (breps != null)
+                        {
+                            double max_volume = breps[0].GetVolume();
+                            supportPillar = breps[0];
+                            foreach (var candidate_pillar in breps)
+                            {
+                                if (max_volume < candidate_pillar.GetVolume())
+                                {
+                                    max_volume = candidate_pillar.GetVolume();
+                                    supportPillar = candidate_pillar;
+                                }
+                            }
+                        }
+
+
+
+                        count++;
+                        myDoc.Objects.Add(supportPillar);
+                    }
+                }
+
 
                 foreach (var item in generateHelper.toDelete)
                 {

@@ -321,8 +321,8 @@ namespace DynaModel_v2.Geometry
             //Rack holder middle curves for support pillar 2
             rack_holder_middle_curves = new List<Curve>();
             //Line 1
-            point2 = new Point3d(x+ _rack_holder_length, bBox.Min.Y + _rackBase_holder_gap + _rackBase_thickness + _rack_holder_thickness / 2, bBox.Min.Z - _rack_holder_gap - _rackBase_extend_from_rack - _rack_holder_thickness / 2);
-            point1 = new Point3d(x+ _rack_holder_length, bBox.Min.Y - _rackBase_holder_gap - _rack_holder_thickness / 2, bBox.Min.Z - _rackBase_extend_from_rack - _rackBase_holder_gap - _rack_holder_thickness / 2);
+            point2 = new Point3d(x + _rack_holder_length, bBox.Min.Y + _rackBase_holder_gap + _rackBase_thickness + _rack_holder_thickness / 2, bBox.Min.Z - _rack_holder_gap - _rackBase_extend_from_rack - _rack_holder_thickness / 2);
+            point1 = new Point3d(x + _rack_holder_length, bBox.Min.Y - _rackBase_holder_gap - _rack_holder_thickness / 2, bBox.Min.Z - _rackBase_extend_from_rack - _rackBase_holder_gap - _rack_holder_thickness / 2);
             rack_holder_middle_curves.Add(new Line(point2, point1).ToNurbsCurve());
 
             //Line 1
@@ -335,7 +335,7 @@ namespace DynaModel_v2.Geometry
 
             Curve[] rack_holder_middle_curves2 = Curve.JoinCurves(rack_holder_middle_curves, myDoc.ModelAbsoluteTolerance, true);
 
-            _rack_holder_middle_curve_2 = rack_holder_middle_curves1[0];
+            _rack_holder_middle_curve_2 = rack_holder_middle_curves2[0];
         }
 
         protected void GenerateRack()
@@ -363,7 +363,7 @@ namespace DynaModel_v2.Geometry
             _boundingBox = base.Model.GetBoundingBox(true).ToBrep();
             _boundingBoxCenter = base.Model.GetBoundingBox(true).Center;
 
-            
+
             ModifyRack();
             GenerateHolder();
 

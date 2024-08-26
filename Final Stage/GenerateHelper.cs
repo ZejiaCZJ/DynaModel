@@ -2304,8 +2304,12 @@ namespace DynaModel_v2.Final_Stage
                     approach = "A*";
 
                 bestStartRoute_pts = FindShortestPath(combinablePipeRoute.PointAtStart, pipeExit, currModel, currModel, 1);
+                
+
                 if (bestStartRoute_pts.Count == 0)
                     approach = "A*";
+
+                //bestStartRoute_pts.RemoveAt(bestStartRoute_pts.Count - 2);
             }
             else
             {
@@ -2320,6 +2324,7 @@ namespace DynaModel_v2.Final_Stage
             //Find the best approach
             if (approach != "A*")
             {
+                bestStartRoute_pts.RemoveAt(bestStartRoute_pts.Count - 1);
                 bestStartRoute_pts.Add(combinablePipeRoute.PointAtStart);
                 bestEndRoute = Curve.CreateInterpolatedCurve(bestEndRoute_pts, 1);
                 bestStartRoute = Curve.CreateInterpolatedCurve(bestStartRoute_pts, 1);
@@ -2755,7 +2760,7 @@ namespace DynaModel_v2.Final_Stage
                 mainPipePairs.Add(front_pipe_clearance);
                 mainPipePairs.Add(end_pipe_clearance);
 
-
+                
 
                 Guid front_pipe_guid = myDoc.Objects.Add(front_pipe);
                 Guid source_extension_guid = myDoc.Objects.Add(source_extension);
@@ -2890,7 +2895,7 @@ namespace DynaModel_v2.Final_Stage
                 //Cut the first 5mm of the bestRoute to generate the inner pipe
                 Curve soluablePipeRoute = bestRoute.Trim(CurveEnd.Start, bestRoute.GetLength() / 10);
 
-                Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, led_pipe_outer_radius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                Brep[] soluablePipe = Brep.CreatePipe(soluablePipeRoute, led_pipe_inner_radius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                 Brep[] conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, led_pipe_inner_radius, led_pipe_outer_radius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 
@@ -2962,7 +2967,7 @@ namespace DynaModel_v2.Final_Stage
                                 //The current generated light source pipe cannot be created, we cut the route more.
                                 soluablePipeRoute = soluablePipeRoute.Trim(CurveEnd.Start, 1);
 
-                                soluablePipe = Brep.CreatePipe(soluablePipeRoute, led_pipe_outer_radius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
+                                soluablePipe = Brep.CreatePipe(soluablePipeRoute, led_pipe_inner_radius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
                                 conductivePipe = Brep.CreateThickPipe(soluablePipeRoute, led_pipe_inner_radius, led_pipe_outer_radius, false, PipeCapMode.Flat, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians);
 
 
@@ -4799,6 +4804,23 @@ namespace DynaModel_v2.Final_Stage
                 return true;
             }
             return false;
+        }
+
+        public List<Point3d> ReSortRoute(List<Point3d> inRoute, Point3d goal)
+        {
+            List<Point3d> outRoute = new List<Point3d>();
+
+            int i = 0;
+            double distance = double.MaxValue;
+
+            while (i < inRoute.Count && distance >= inRoute[i].DistanceTo(goal))
+            {
+                outRoute.Add(inRoute[i]);
+                distance = inRoute[i++].DistanceTo(goal);
+            }
+            
+
+            return outRoute;
         }
 
         public void RollBack()
