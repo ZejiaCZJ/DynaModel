@@ -3651,6 +3651,41 @@ namespace DynaModel_v2.Final_Stage
             return true;
         }
 
+        public bool GenerateCarParameter(ref Item save_item, out List<Brep> subtrahends)
+        {
+            subtrahends = new List<Brep>();
+
+            List<Brep> allBreps = save_item.AllBreps;
+            List<Brep> allGaskets = save_item.AllGaskets;
+            List<Curve> gasketCircles1 = save_item.GasketCircles;
+            List<Curve> shaftCurves = save_item.ShaftCurve;
+
+            #region Check for intersection
+            //check if gears and shafts are not intersected with the hollowed model
+
+            //check if gears and shafts are intersected with other breps in the rhinoview
+
+            //check if gaskets are not intersected with the other breps in the rhinoview
+
+
+            #endregion
+
+            foreach (var brep in allBreps)
+            {
+                gaskets_guid.Add(myDoc.Objects.Add(brep));
+            }
+
+
+            foreach (var brep in allGaskets)
+                myDoc.Objects.Add(brep);
+
+            gasketCircles.AddRange(gasketCircles1);
+
+            myDoc.Objects.Hide(currModelObjId, true);
+
+            return true;
+        }
+
         private void GetConductivePipeExits(Brep currModel)
         {
             BoundingBox boundingBox = currModel.GetBoundingBox(true);
@@ -3737,36 +3772,7 @@ namespace DynaModel_v2.Final_Stage
             myDoc.Objects.AddPoint(rightLowerCorner);
         }
 
-        public bool GenerateCarParameter(ref Item save_item, out List<Brep> subtrahends)
-        {
-            subtrahends = new List<Brep>();
-
-            List<Brep> allBreps = save_item.AllBreps;
-            List<Brep> allGaskets = save_item.AllGaskets;
-            List<Curve> gasketCircles1 = save_item.GasketCircles;
-            List<Curve> shaftCurves = save_item.ShaftCurve;
-
-            #region Check for intersection
-            //check if gears and shafts are not intersected with the hollowed model
-
-            //check if gears and shafts are intersected with other breps in the rhinoview
-
-            //check if gaskets are not intersected with the other breps in the rhinoview
-
-
-            #endregion
-
-            foreach (var brep in allBreps)
-                myDoc.Objects.Add(brep);
-
-            foreach (var brep in allGaskets)
-                myDoc.Objects.Add(brep);
-
-            gasketCircles.AddRange(gasketCircles1);
-
-
-            return true;
-        }
+        
 
         private bool GetLongestCurve(Curve[] curves, out Curve curve)
         {

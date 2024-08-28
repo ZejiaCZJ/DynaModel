@@ -775,56 +775,68 @@ namespace DynaModel_v2.Car
                             myDoc.Objects.Add(shaft);
 
                         #region Ask user to select point to create a back wheel shaft
-                        pts_Guid = new List<Guid>();
-                        foreach (Point3d point in surfacePts)
+                        bool success = false;
+                        Curve second_shaft_rail = null;
+                        Brep second_shaft = new Brep();
+                        while (!success)
                         {
-                            Guid pointID = myDoc.Objects.AddPoint(point);
-                            pts_Guid.Add(pointID);
-                        }
-                        myDoc.Views.Redraw();
-
-                        #region Ask the user to select points to generate the area of the parameter
-                        getSelectedPts = RhinoGet.GetOneObject("Please select points for a touch parameter, press ENTER when finished", false, ObjectType.Point, out ObjRef pointRef);
-                        #endregion
-
-                        if (getSelectedPts == Rhino.Commands.Result.Success)
-                        {
-                            end_point = new Point3d(pointRef.Point().Location);
-                            x = end_point.X;
-                            y = end_point.Y;
-                            z = end_point.Z;
-
-                            //Delete all points on the view
-                            foreach (var ptsID in pts_Guid)
+                            pts_Guid = new List<Guid>();
+                            foreach (Point3d point in surfacePts)
                             {
-                                myDoc.Objects.Delete(ptsID, true);
+                                Guid pointID = myDoc.Objects.AddPoint(point);
+                                pts_Guid.Add(pointID);
                             }
+                            myDoc.Views.Redraw();
 
-                            Curve second_shaft_rail = new Line(end_point, start_gear.Direction, 10).ToNurbsCurve();
-                            second_shaft_rail = second_shaft_rail.Extend(CurveEnd.Both, 500, CurveExtensionStyle.Line);
-                            Intersection.CurveBrep(second_shaft_rail, currModel, myDoc.ModelAbsoluteTolerance, out _, out intersectionPoints);
-                            second_shaft_rail = new Line(intersectionPoints[0], intersectionPoints[1]).ToNurbsCurve();
-                            second_shaft_rail = second_shaft_rail.Extend(CurveEnd.Both, wheel_shaft_extends_from_model, CurveExtensionStyle.Line);
+                            getSelectedPts = RhinoGet.GetOneObject("Please select points for a touch parameter, press ENTER when finished", false, ObjectType.Point, out pointRef);
 
-                            Brep second_shaft = Brep.CreatePipe(second_shaft_rail, shaft_radius, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+                            if (getSelectedPts == Rhino.Commands.Result.Success)
+                            {
+                                end_point = new Point3d(pointRef.Point().Location);
+                                x = end_point.X;
+                                y = end_point.Y;
+                                z = end_point.Z;
 
-                            Intersection.BrepBrep(second_shaft, foundation, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out _);
+                                //Delete all points on the view
+                                foreach (var ptsID in pts_Guid)
+                                {
+                                    myDoc.Objects.Delete(ptsID, true);
+                                }
 
-                            if()
+                                second_shaft_rail = new Line(end_point, start_gear.Direction, 10).ToNurbsCurve();
+                                second_shaft_rail = second_shaft_rail.Extend(CurveEnd.Both, 500, CurveExtensionStyle.Line);
+                                Intersection.CurveBrep(second_shaft_rail, currModel, myDoc.ModelAbsoluteTolerance, out _, out intersectionPoints);
+                                second_shaft_rail = new Line(intersectionPoints[0], intersectionPoints[1]).ToNurbsCurve();
+                                second_shaft_rail = second_shaft_rail.Extend(CurveEnd.Both, wheel_shaft_extends_from_model, CurveExtensionStyle.Line);
 
+                                second_shaft = Brep.CreatePipe(second_shaft_rail, shaft_radius, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                                Intersection.BrepBrep(second_shaft, foundation, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out _);
+
+                                if (intersectionCurves != null && intersectionCurves.Length > 0)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    success = true;
+                                }
+                            }
                         }
+                        myDoc.Objects.Add(second_shaft);
                         #endregion
 
 
 
 
 
-                            List<Brep> allBreps = new List<Brep>();
+                        List<Brep> allBreps = new List<Brep>();
                         allBreps.Add(first_spur_gear.Model);
                         allBreps.Add(first_spur_gear_shaft);
                         foreach (var gear in allGears)
                             allBreps.Add(gear.Model);
                         allBreps.AddRange(allShafts);
+                        allBreps.Add(second_shaft);
 
                         savedItem.AllBreps = allBreps; //Gears and shafts
                         savedItem.AllGaskets = allGaskets; //Gaskets
@@ -832,7 +844,7 @@ namespace DynaModel_v2.Car
                         
                         savedItem.ShaftCurve = new List<Curve>();
                         savedItem.ShaftCurve.Add(first_spur_gear_shaft_rail); //Shaft rail to generate shaft clearance
-                        savedItem.ShaftCurve.Add(first_spur_gear_shaft_rail);
+                        savedItem.ShaftCurve.Add(second_shaft_rail);
                         savedItem.Name = "Car";
 
                         DA.SetData(0, savedItem);
