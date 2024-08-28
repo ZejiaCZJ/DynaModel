@@ -402,16 +402,6 @@ namespace DynaModel_v2.Light_Pipe
 
                         if (pipeEndEdge.IsValid)
                         {
-                            //myDoc.Objects.AddCurve(intersectionCurves1[0]);
-                            //myDoc.Objects.AddCurve(pipeEndEdge.ToNurbsCurve());
-                            //myDoc.Objects.Select(curve1);
-                            //myDoc.Objects.Select(curve2);
-                            //string loftCommand = "_Loft _Enter _Enter";
-                            //RhinoApp.RunScript(loftCommand, true);
-
-                            //// Clean up the selection
-                            //myDoc.Objects.UnselectAll();
-
                             Curve curve1 = intersectionCurves1[0];
                             Curve curve2 = pipeEndEdge.ToNurbsCurve();
 

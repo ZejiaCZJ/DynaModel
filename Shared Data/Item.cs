@@ -26,6 +26,14 @@ namespace DynaModel_v2.SharedData
 
         public List<Brep> ButtonSet { get; set; }
 
+        public List<Curve> GasketCircles { get; set; }
+
+        public List<Brep> AllGaskets { get; set; }
+
+        public List<Brep> AllBreps { get; set; }
+
+        public List<Curve> ShaftCurve { get; set; }
+
         public Curve Button_Spring_Circle { get; set; }
 
         public Vector3d Normal { get; set; }

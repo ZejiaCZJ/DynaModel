@@ -33,24 +33,24 @@ namespace DynaModel_v2.Final_Stage
         public Brep currModel_Hollowed = null;
         public Brep last_currModel_Hollowed = null;
         public Brep last_currModel = null;
-        BoundingBox currModel_box;
-        List<Brep> allBreps = new List<Brep>();
-        List<Guid> allBreps_guid = new List<Guid>();
-        Voxel[,,] voxelSpace = null;
-        List<Brep> allPipes = new List<Brep>();
+        public BoundingBox currModel_box;
+        public List<Brep> allBreps = new List<Brep>();
+        public List<Guid> allBreps_guid = new List<Guid>();
+        public Voxel[,,] voxelSpace = null;
+        public List<Brep> allPipes = new List<Brep>();
         public ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
-        double foundation_length = 60;
-        double foundation_width = 90;
-        double foundation_height = 30;
-        Point3d foundation_origin;
-        Point3d foundation_center;
+        public double foundation_length = 60;
+        public double foundation_width = 90;
+        public double foundation_height = 30;
+        public Point3d foundation_origin;
+        public Point3d foundation_center;
         public Brep foundation { get; set; }
-        double pcb_width = 50;
-        double pcb_length = 50;
-        double pcb_origin_x = 5; //Relative coordinate to foundation
-        double pcb_origin_y = 5;//Relative coordinate to foundation
-        Point3d pcb_origin;
-        Point3d pcb_center;
+        public double pcb_width = 50;
+        public double pcb_length = 50;
+        public double pcb_origin_x = 5; //Relative coordinate to foundation
+        public double pcb_origin_y = 5;//Relative coordinate to foundation
+        public Point3d pcb_origin;
+        public Point3d pcb_center;
         public List<Brep> toDelete = new List<Brep>();
         private List<Guid> specialPipes = new List<Guid>(); //Shafts that is not vertical nor horizontal
 
@@ -1768,6 +1768,13 @@ namespace DynaModel_v2.Final_Stage
                 tips_distance = (connector_gear.CenterPoint.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius) / 2;
                 connector_gear_teethNum = getNumTeeth(tips_distance);
 
+                if(connector_gear_teethNum <= 0)
+                {
+                    RhinoApp.WriteLine("Cannot generate translational motion parameter given this end effector: rack and initial gear are too close to each other");
+                    RollBack();
+                    return false;
+                }
+
                 connector_gear = new SpurGear(connector_gear_centerPoint, connector_gear.Direction, connector_gear.X_direction, connector_gear_teethNum, module, pressure_angle, thickness, connector_gear.SelfRotAngle, false);
             }
             else
@@ -1791,7 +1798,7 @@ namespace DynaModel_v2.Final_Stage
                     intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
                     int count = 0;
                     Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                    while (intersectionCurves != null && intersectionCurves.Length > 0)
+                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
                     {
                         connector_gear.Rotate(0.5);
                         Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -1813,7 +1820,7 @@ namespace DynaModel_v2.Final_Stage
                     intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
                     int count = 0;
                     Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                    while (intersectionCurves != null && intersectionCurves.Length > 0)
+                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
                     {
                         connector_gear.Rotate(0.5);
                         Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -1840,7 +1847,7 @@ namespace DynaModel_v2.Final_Stage
                     int count = 0;
 
                     Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                    while (intersectionCurves != null && intersectionCurves.Length > 0)
+                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
                     {
                         connector_gear.Rotate(0.5);
                         Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -3728,6 +3735,37 @@ namespace DynaModel_v2.Final_Stage
             myDoc.Objects.AddPoint(rightUpperCorner);
             myDoc.Objects.AddPoint(leftLowerCorner);
             myDoc.Objects.AddPoint(rightLowerCorner);
+        }
+
+        public bool GenerateCarParameter(ref Item save_item, out List<Brep> subtrahends)
+        {
+            subtrahends = new List<Brep>();
+
+            List<Brep> allBreps = save_item.AllBreps;
+            List<Brep> allGaskets = save_item.AllGaskets;
+            List<Curve> gasketCircles1 = save_item.GasketCircles;
+            List<Curve> shaftCurves = save_item.ShaftCurve;
+
+            #region Check for intersection
+            //check if gears and shafts are not intersected with the hollowed model
+
+            //check if gears and shafts are intersected with other breps in the rhinoview
+
+            //check if gaskets are not intersected with the other breps in the rhinoview
+
+
+            #endregion
+
+            foreach (var brep in allBreps)
+                myDoc.Objects.Add(brep);
+
+            foreach (var brep in allGaskets)
+                myDoc.Objects.Add(brep);
+
+            gasketCircles.AddRange(gasketCircles1);
+
+
+            return true;
         }
 
         private bool GetLongestCurve(Curve[] curves, out Curve curve)
