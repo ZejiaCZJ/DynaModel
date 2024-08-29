@@ -48,11 +48,11 @@ namespace DynaModel_v2.Car
         private static double gasket_outer_radius = 7;
         private static double gasket_gear_gap = 0.6;
         private static double bottom_gasket_gear_height = 4;
-        public List<Curve> gasketCircles = new List<Curve>();
-        public List<Guid> gaskets_guid = new List<Guid>();
-        private List<SpurGear> allGears = new List<SpurGear>();
-        private List<Brep> allGaskets = new List<Brep>();
-        private List<Brep> allShafts = new List<Brep>();
+        public List<Curve> gasketCircles;
+        public List<Guid> gaskets_guid;
+        private List<SpurGear> allGears;
+        private List<Brep> allGaskets;
+        private List<Brep> allShafts;
 
         public ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
 
@@ -64,6 +64,13 @@ namespace DynaModel_v2.Car
               "This component create a car wheel axis",
               "DynaModel_v2", "Car Wheel")
         {
+            allGears = new List<SpurGear>();
+            allGaskets = new List<Brep>();
+            allShafts = new List<Brep>();
+
+            gaskets_guid = new List<Guid>();
+            gasketCircles = new List<Curve>();
+
             int solidIndex = myDoc.Materials.Add();
             Rhino.DocObjects.Material solidMat = myDoc.Materials[solidIndex];
             solidMat.DiffuseColor = System.Drawing.Color.White;
@@ -413,6 +420,10 @@ namespace DynaModel_v2.Car
 
                     if (getSelectedPts == Rhino.Commands.Result.Success)
                     {
+                        allGears = new List<SpurGear>();
+                        allGaskets = new List<Brep>();
+                        allShafts = new List<Brep>();
+
                         Item savedItem = new Item();
 
                         Point3d end_point = new Point3d(pointRef.Point().Location);
@@ -546,7 +557,6 @@ namespace DynaModel_v2.Car
 
 
                         List<SpurGear> intermediates_gears = new List<SpurGear>();
-                        List<SpurGear> intersected_intermediates_gears = new List<SpurGear>();
                         if (intermediate_gears_required)
                         {
                             tips_distance = (first_spur_gear.CenterPoint.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius - first_spur_gear.BaseRadius);//Distance from first spur gear's pitch to start gear's pitch
@@ -560,17 +570,46 @@ namespace DynaModel_v2.Car
                             }
                             else
                             {
-                                for (int i = 0; i < number_of_gear.Item1; i++)
+                                if(number_of_gear.Item1 != 1)
                                 {
-                                    start_gear_connection_rail = new Line(start_gear.CenterPoint, first_spur_gear.CenterPoint);
+                                    for (int i = 0; i < number_of_gear.Item1 - 1; i++)
+                                    {
+                                        start_gear_connection_rail = new Line(start_gear.CenterPoint, first_spur_gear.CenterPoint);
 
-                                    start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
-                                    Point3d intermediate_centerPoint = start_gear_connection_rail.To;
-                                    SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+                                        start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
+                                        Point3d intermediate_centerPoint = start_gear_connection_rail.To;
+                                        SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
 
-                                    intermediates_gears.Add(intermediate_gear);
+                                        intermediates_gears.Add(intermediate_gear);
+                                    }
 
+                                    //Create the intermediate gear between the first spur gear and intermediate_gear[number_of_gear.Item-2], reason: the calculation for this last intermediate gear's teeth number is sometimes inconsistent
+                                    tips_distance = (first_spur_gear.CenterPoint.DistanceTo(intermediates_gears[intermediates_gears.Count - 1].CenterPoint) - intermediates_gears[intermediates_gears.Count - 1].BaseRadius - first_spur_gear.BaseRadius) / 2;
+                                    int teethNum = getNumTeeth(tips_distance);
+                                    start_gear_connection_rail = new Line(intermediates_gears[intermediates_gears.Count - 1].CenterPoint, start_gear_connection_rail.Direction, intermediates_gears[intermediates_gears.Count - 1].BaseRadius + tips_distance);
+                                    Point3d intermediate_centerPoint_temp = start_gear_connection_rail.To;
+                                    SpurGear intermediate_gear_temp = new SpurGear(intermediate_centerPoint_temp, intermediate_gear_Direction, intermediate_gear_xDir, teethNum, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+
+                                    intermediates_gears.Add(intermediate_gear_temp);
                                 }
+                                else
+                                {
+                                    for (int i = 0; i < number_of_gear.Item1; i++)
+                                    {
+                                        start_gear_connection_rail = new Line(start_gear.CenterPoint, first_spur_gear.CenterPoint);
+
+                                        start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
+                                        Point3d intermediate_centerPoint = start_gear_connection_rail.To;
+                                        SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+
+                                        intermediates_gears.Add(intermediate_gear);
+
+                                    }
+                                }
+                                
+
+                                
+
 
                                 //Make all gears match
                                 if (number_of_gear.Item1 == 1)
@@ -590,13 +629,13 @@ namespace DynaModel_v2.Car
                                         Intersection.BrepBrep(intermediates_gears[0].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                                         while (intersectionCurves != null && intersectionCurves.Length > 0)
                                         {
-                                            first_spur_gear.Rotate(0.15);
+                                            first_spur_gear.Rotate(0.3);
                                             Intersection.BrepBrep(intermediates_gears[0].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                                             if (count > 1000)
                                             {
-                                                intersected_intermediates_gears.Add(intermediates_gears[0]);
-                                                intermediates_gears.RemoveAt(0);
-                                                break;
+                                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                                Cancel();
+                                                return;
                                             }
                                             count++;
                                         }
@@ -620,16 +659,43 @@ namespace DynaModel_v2.Car
                                         Intersection.BrepBrep(intermediates_gears[1].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                                         while (intersectionCurves != null && intersectionCurves.Length > 0)
                                         {
-                                            first_spur_gear.Rotate(0.1);
+                                            first_spur_gear.Rotate(0.3);
                                             Intersection.BrepBrep(intermediates_gears[1].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                                             if(count > 1000)
                                             {
-                                                intersected_intermediates_gears.Add(intermediates_gears[1]);
-                                                intermediates_gears.RemoveAt(1);
-                                                break;
+                                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                                Cancel();
+                                                return;
                                             }
                                             count++;
-                                                
+                                        }
+                                    }
+
+                                    //Double check intermediate gear 0 and 1
+                                    count = 0;
+                                    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                                    {
+                                        first_spur_gear.Rotate(0.5);
+                                        Intersection.BrepBrep(intermediates_gears[1].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                        count++;
+                                    }
+
+                                    if (count > 0)
+                                    {
+                                        intermediates_gears[0].Rotate(2);
+                                        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                        while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                        {
+                                            first_spur_gear.Rotate(0.3);
+                                            Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                            if (count > 1000)
+                                            {
+                                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                                Cancel();
+                                                return;
+                                            }
+                                            count++;
                                         }
                                     }
 
@@ -655,13 +721,43 @@ namespace DynaModel_v2.Car
                                         Intersection.BrepBrep(intermediates_gears[2].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                                         while (intersectionCurves != null && intersectionCurves.Length > 0)
                                         {
-                                            first_spur_gear.Rotate(0.1);
+                                            first_spur_gear.Rotate(0.03);
                                             Intersection.BrepBrep(intermediates_gears[2].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                                             if (count > 1000)
                                             {
-                                                intersected_intermediates_gears.Add(intermediates_gears[2]);
-                                                intermediates_gears.RemoveAt(2);
-                                                break;
+                                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                                Cancel();
+                                                return;
+                                            }
+                                            count++;
+                                        }
+                                    }
+
+                                    //Double Check intermediates gear 1 and 2
+                                    count = 0;
+                                    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                                    {
+                                        intermediates_gears[1].Rotate(0.5);
+                                        intermediates_gears[0].Rotate(0.5);
+                                        Intersection.BrepBrep(intermediates_gears[1].Model, first_spur_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                        count++;
+                                    }
+
+                                    if (count > 0)
+                                    {
+                                        intermediates_gears[0].Rotate(2);
+                                        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                        while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                        {
+                                            intermediates_gears[1].Rotate(0.03);
+                                            intermediates_gears[0].Rotate(0.03);
+                                            Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                                            if (count > 1000)
+                                            {
+                                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                                Cancel();
+                                                return;
                                             }
                                             count++;
                                         }
@@ -669,7 +765,6 @@ namespace DynaModel_v2.Car
                                 }
 
                                 allGears.AddRange(intermediates_gears);
-                                allGears.AddRange(intersected_intermediates_gears);
                             }
 
                         }
@@ -778,13 +873,6 @@ namespace DynaModel_v2.Car
                             myDoc.Objects.Add(gear.Model);
                             allBreps.Add(gear.Model);
                         }
-                            
-                        foreach (var gear in intersected_intermediates_gears)
-                        {
-                            myDoc.Objects.Add(gear.Model, redAttribute);
-                            allBreps.Add(gear.Model);
-                        }
-                            
 
                         foreach (var gasekt in intermediate_gear_top_gaskets)
                         {
