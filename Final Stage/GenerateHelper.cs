@@ -39,16 +39,16 @@ namespace DynaModel_v2.Final_Stage
         public Voxel[,,] voxelSpace = null;
         public List<Brep> allPipes = new List<Brep>();
         public ObjectAttributes solidAttribute, lightGuideAttribute, redAttribute, yellowAttribute, soluableAttribute;
-        public double foundation_length = 60;
-        public double foundation_width = 90;
-        public double foundation_height = 30;
+        public double foundation_length = 64;
+        public double foundation_width = 52;
+        public double foundation_height = 18;
         public Point3d foundation_origin;
         public Point3d foundation_center;
         public Brep foundation { get; set; }
         public double pcb_width = 50;
         public double pcb_length = 50;
-        public double pcb_origin_x = 5; //Relative coordinate to foundation
-        public double pcb_origin_y = 5;//Relative coordinate to foundation
+        public double pcb_origin_x = 1; //Relative coordinate to foundation
+        public double pcb_origin_y = 1+13;//Relative coordinate to foundation
         public Point3d pcb_origin;
         public Point3d pcb_center;
         public List<Brep> toDelete = new List<Brep>();
@@ -56,7 +56,7 @@ namespace DynaModel_v2.Final_Stage
 
 
         //Gear parameter
-        private static double start_gear_elevation = 4;
+        private static double start_gear_elevation = 14;
         private static double module = 1.5;
         private static double pressure_angle = 20;
         private static double thickness = 5;
@@ -97,8 +97,8 @@ namespace DynaModel_v2.Final_Stage
         public List<Guid> led_pipes_guid = new List<Guid>();
         public List<(Brep, Brep)> lightSourcePipePairs = new List<(Brep, Brep)>(); //The pairs of pipe that cover light source and its clearance, this is for cases that one light source is used by multiple led light pipe
         public List<Brep> mainPipePairs = new List<Brep>(); //The clearance of the main body of led light pipe
-        public double led_pipe_inner_radius = 4.9;
-        public double led_pipe_outer_radius = 5.5;
+        public double led_pipe_inner_radius = 5;
+        public double led_pipe_outer_radius = 6;
 
         //Air Pipe parameter
         public double air_pipe_inner_radius = 2;
@@ -370,7 +370,7 @@ namespace DynaModel_v2.Final_Stage
             BoundingBox mainModel_bbox = mainModel.GetBoundingBox(true);
 
             //Find central point of the base of the bounding box
-            Point3d start_gear_centerPoint = new Point3d(pcb_origin.X + pcb_width/2, foundation_origin.Y, foundation_origin.Z + foundation_height + start_gear_elevation);
+            Point3d start_gear_centerPoint = new Point3d(pcb_origin.X + pcb_width/2, foundation_origin.Y + 6.5, foundation_origin.Z + foundation_height + start_gear_elevation);
             Vector3d start_gear_Direction = new Vector3d(0, 0, 1);
             Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
             int start_gear_teethNum = 20;
@@ -1486,7 +1486,7 @@ namespace DynaModel_v2.Final_Stage
             BoundingBox mainModel_bbox = mainModel.GetBoundingBox(true);
 
             //Find central point of the base of the bounding box
-            Point3d start_gear_centerPoint = new Point3d(pcb_origin.X + pcb_width / 2, foundation_origin.Y, foundation_origin.Z + foundation_height + start_gear_elevation);
+            Point3d start_gear_centerPoint = new Point3d(pcb_origin.X + pcb_width / 2, foundation_origin.Y + 6.5, foundation_origin.Z + foundation_height + start_gear_elevation);
             Vector3d start_gear_Direction = new Vector3d(0, 0, 1);
             Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
             int start_gear_teethNum = 20;
@@ -2916,7 +2916,7 @@ namespace DynaModel_v2.Final_Stage
                 //BrepEdge of the start of the soluablePipe
                 Vector3d tangent = soluablePipeRoute.TangentAtStart;
                 Circle pipeStartEdge = new Circle(new Plane(soluablePipeRoute.PointAtStart, tangent), soluablePipeRoute.PointAtStart, led_pipe_outer_radius);
-                Circle actual_pipeStartCircle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z - 1), led_pipe_outer_radius);
+                Circle actual_pipeStartCircle = new Circle(new Point3d(pipeExit.actualLocation.X, pipeExit.actualLocation.Y, pipeExit.actualLocation.Z), led_pipe_outer_radius);
 
                 bool valid = false;
                 //Generate the soluable pipe that perfectly match the light source from the foundation
@@ -3672,12 +3672,15 @@ namespace DynaModel_v2.Final_Stage
 
             foreach (var brep in allBreps)
             {
-                gaskets_guid.Add(myDoc.Objects.Add(brep));
+                myDoc.Objects.Add(brep);
             }
 
 
             foreach (var brep in allGaskets)
-                myDoc.Objects.Add(brep);
+            {
+                gaskets_guid.Add(myDoc.Objects.Add(brep));
+            }
+                
 
             gasketCircles.AddRange(gasketCircles1);
 
@@ -3686,22 +3689,23 @@ namespace DynaModel_v2.Final_Stage
             return true;
         }
 
+        //Conductive position
         private void GetConductivePipeExits(Brep currModel)
         {
             BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
             //Left upper corner of the PCB
-            Point3d leftUpperCorner = new Point3d(pcb_origin.X + 15, pcb_origin.Y + 70, pcb_origin.Z);
+            Point3d leftUpperCorner = new Point3d(pcb_origin.X + 3.5, pcb_origin.Y + 46 + 10, pcb_origin.Z);
 
             //Right upper corner of the PCB
-            Point3d rightUpperCorner = new Point3d(pcb_origin.X + 70, pcb_origin.Y + 70, pcb_origin.Z);
+            Point3d rightUpperCorner = new Point3d(pcb_origin.X + 45, pcb_origin.Y + 46 + 10, pcb_origin.Z);
 
             //Left lower corner of the PCB
-            Point3d leftLowerCorner = new Point3d(pcb_origin.X + 15, pcb_origin.Y + 15, pcb_origin.Z);
+            Point3d leftLowerCorner = new Point3d(pcb_origin.X + 3.5 - 10, pcb_origin.Y + 2, pcb_origin.Z);
 
             //Right lower corner of the PCB
-            Point3d rightLowerCorner = new Point3d(pcb_origin.X + 70, pcb_origin.Y + 15, pcb_origin.Z);
-
+            Point3d rightLowerCorner = new Point3d(pcb_origin.X + 45 + 10, pcb_origin.Y + 2, pcb_origin.Z);
+            
             Index lu = FindClosestPointIndex(leftUpperCorner, currModel, "accurate");
             Index ru = FindClosestPointIndex(rightUpperCorner, currModel, "accurate");
             Index ll = FindClosestPointIndex(leftLowerCorner, currModel, "accurate");
@@ -4149,16 +4153,16 @@ namespace DynaModel_v2.Final_Stage
             BoundingBox boundingBox = currModel.GetBoundingBox(true);
 
             //Left upper corner of the PCB
-            Point3d leftUpperCorner = new Point3d(pcb_origin.X + 6.2, pcb_origin.Y + 46.7, pcb_origin.Z);
+            Point3d leftUpperCorner = new Point3d(pcb_origin.X + 3.5, pcb_origin.Y + 46, pcb_origin.Z);
 
             //Right upper corner of the PCB
-            Point3d rightUpperCorner = new Point3d(pcb_origin.X + 45.8, pcb_origin.Y + 46.3, pcb_origin.Z);
+            Point3d rightUpperCorner = new Point3d(pcb_origin.X + 45, pcb_origin.Y + 46, pcb_origin.Z);
 
             //Left lower corner of the PCB
-            Point3d leftLowerCorner = new Point3d(pcb_origin.X + 2.9, pcb_origin.Y + 5.55, pcb_origin.Z);
+            Point3d leftLowerCorner = new Point3d(pcb_origin.X + 3.5, pcb_origin.Y + 2, pcb_origin.Z);
 
             //Right lower corner of the PCB
-            Point3d rightLowerCorner = new Point3d(pcb_origin.X + 44.5, pcb_origin.Y + 6.5, pcb_origin.Z);
+            Point3d rightLowerCorner = new Point3d(pcb_origin.X + 45, pcb_origin.Y + 2, pcb_origin.Z);
 
             Index lu = FindClosestPointIndex(leftUpperCorner, currModel, "accurate");
             Index ru = FindClosestPointIndex(rightUpperCorner, currModel, "accurate");

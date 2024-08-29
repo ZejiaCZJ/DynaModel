@@ -23,16 +23,16 @@ namespace DynaModel_v2.Car
         private Brep currModel_Hollowed = null;
         private BoundingBox currModel_box;
 
-        public double foundation_length = 60;
-        public double foundation_width = 60;
-        public double foundation_height = 30;
+        public double foundation_length = 64;
+        public double foundation_width = 52;
+        public double foundation_height = 18;
         public Point3d foundation_origin;
         public Point3d foundation_center;
         public Brep foundation { get; set; }
         public double pcb_width = 50;
         public double pcb_length = 50;
-        public double pcb_origin_x = 5; //Relative coordinate to foundation
-        public double pcb_origin_y = 5;//Relative coordinate to foundation
+        public double pcb_origin_x = 1; //Relative coordinate to foundation
+        public double pcb_origin_y = 1+13;//Relative coordinate to foundation
         public Point3d pcb_origin;
         public Point3d pcb_center;
 
@@ -250,7 +250,7 @@ namespace DynaModel_v2.Car
                     #endregion
 
                     #region Show initial gear
-                    Point3d start_gear_centerPoint = new Point3d(foundation_origin.X + 6, foundation_origin.Y + 63, foundation_origin.Z + 10);
+                    Point3d start_gear_centerPoint = new Point3d(foundation_origin.X + 6, foundation_origin.Y + 61, foundation_origin.Z + 7);
                     Vector3d start_gear_Direction = new Vector3d(0, 1, 0);
                     Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
                     int start_gear_teethNum = 20;
@@ -757,22 +757,53 @@ namespace DynaModel_v2.Car
 
 
 
+                        List<Brep> allBreps = new List<Brep>();
+                        allBreps.Add(first_spur_gear_shaft);
+                        allBreps.Add(first_spur_gear.Model);
+                        allBreps.Add(first_spur_gear_bottom_gasket);
+                        allBreps.Add(first_spur_gear_top_gasket);
+                        allBreps.Add(foundation);
+
+
 
                         myDoc.Objects.Add(first_spur_gear_shaft);
                         myDoc.Objects.Add(first_spur_gear.Model);
-
                         gaskets_guid.Add(myDoc.Objects.Add(first_spur_gear_bottom_gasket));
                         gaskets_guid.Add(myDoc.Objects.Add(first_spur_gear_top_gasket));
+
                         foreach (var gear in intermediates_gears)
+                        {
                             myDoc.Objects.Add(gear.Model);
+                            allBreps.Add(gear.Model);
+                        }
+                            
                         foreach (var gear in intersected_intermediates_gears)
+                        {
                             myDoc.Objects.Add(gear.Model, redAttribute);
+                            allBreps.Add(gear.Model);
+                        }
+                            
+
                         foreach (var gasekt in intermediate_gear_top_gaskets)
+                        {
                             myDoc.Objects.Add(gasekt);
+                            allBreps.Add(gasekt);
+                        }
+                            
+
                         foreach (var gasekt in intermediate_gear_bottom_gaskets)
+                        {
                             myDoc.Objects.Add(gasekt);
+                            allBreps.Add(gasekt);
+                        }
+                            
+
                         foreach (var shaft in intermediate_gear_shafts)
+                        {
                             myDoc.Objects.Add(shaft);
+                            allBreps.Add(shaft);
+                        }
+                            
 
                         #region Ask user to select point to create a back wheel shaft
                         bool success = false;
@@ -811,15 +842,19 @@ namespace DynaModel_v2.Car
 
                                 second_shaft = Brep.CreatePipe(second_shaft_rail, shaft_radius, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
-                                Intersection.BrepBrep(second_shaft, foundation, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out _);
+                                foreach(var brep in allBreps)
+                                {
+                                    Intersection.BrepBrep(second_shaft, brep, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out _);
 
-                                if (intersectionCurves != null && intersectionCurves.Length > 0)
-                                {
-                                    continue;
-                                }
-                                else
-                                {
-                                    success = true;
+                                    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                                    {
+                                        success = false;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        success = true;
+                                    }
                                 }
                             }
                         }
@@ -830,15 +865,15 @@ namespace DynaModel_v2.Car
 
 
 
-                        List<Brep> allBreps = new List<Brep>();
-                        allBreps.Add(first_spur_gear.Model);
-                        allBreps.Add(first_spur_gear_shaft);
+                        List<Brep> gears_and_shafts = new List<Brep>();
+                        gears_and_shafts.Add(first_spur_gear.Model);
+                        gears_and_shafts.Add(first_spur_gear_shaft);
                         foreach (var gear in allGears)
-                            allBreps.Add(gear.Model);
-                        allBreps.AddRange(allShafts);
-                        allBreps.Add(second_shaft);
+                            gears_and_shafts.Add(gear.Model);
+                        gears_and_shafts.AddRange(allShafts);
+                        gears_and_shafts.Add(second_shaft);
 
-                        savedItem.AllBreps = allBreps; //Gears and shafts
+                        savedItem.AllBreps = gears_and_shafts; //Gears and shafts
                         savedItem.AllGaskets = allGaskets; //Gaskets
                         savedItem.GasketCircles = gasketCircles; //Gasket circles
                         
