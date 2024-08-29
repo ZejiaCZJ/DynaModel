@@ -250,7 +250,7 @@ namespace DynaModel_v2.Car
                     #endregion
 
                     #region Show initial gear
-                    Point3d start_gear_centerPoint = new Point3d(foundation_origin.X + 6, foundation_origin.Y + 61, foundation_origin.Z + 7);
+                    Point3d start_gear_centerPoint = new Point3d(foundation_origin.X + 6, foundation_origin.Y + 67.5, foundation_origin.Z + 7);
                     Vector3d start_gear_Direction = new Vector3d(0, 1, 0);
                     Vector3d start_gear_xDir = new Vector3d(0, 0, 0);
                     int start_gear_teethNum = 20;
@@ -306,6 +306,7 @@ namespace DynaModel_v2.Car
                                                     {
                                                         Point3d temp_point = new Point3d(start_gear.CenterPoint);
                                                         temp_point.X = intersectionPoints[0].X;
+                                                        temp_point.Z = intersectionPoints[0].Z;
                                                         double tips_distance = (temp_point.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius);
 
                                                         int first_spur_gear_teethNum = getNumTeeth(tips_distance);
@@ -359,6 +360,7 @@ namespace DynaModel_v2.Car
                                                         //Predict if the first spur gear will intersect the model
                                                         Point3d temp_point = new Point3d(start_gear.CenterPoint);
                                                         temp_point.Y = intersectionPoints[0].Y;
+                                                        temp_point.Z = intersectionPoints[0].Z;
                                                         double tips_distance = (temp_point.DistanceTo(start_gear.CenterPoint) - start_gear.BaseRadius);
 
                                                         int first_spur_gear_teethNum = getNumTeeth(tips_distance);

@@ -3655,17 +3655,75 @@ namespace DynaModel_v2.Final_Stage
         {
             subtrahends = new List<Brep>();
 
+            myDoc.Objects.Hide(currModelObjId, true);
+
+            last_currModel = currModel;
+            last_currModel_Hollowed = currModel_Hollowed;
+
             List<Brep> allBreps = save_item.AllBreps;
             List<Brep> allGaskets = save_item.AllGaskets;
             List<Curve> gasketCircles1 = save_item.GasketCircles;
             List<Curve> shaftCurves = save_item.ShaftCurve;
 
+            //Cut the model for two shafts
+            foreach (var curve in save_item.ShaftCurve)
+            {
+                Brep shaft_clearance = Brep.CreatePipe(curve, clearance_shaft_radius, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
+
+                Brep[] difference = Brep.CreateBooleanDifference(currModel_Hollowed, shaft_clearance, myDoc.ModelAbsoluteTolerance);
+
+                GetSimilarVolumeBrep(difference, currModel_Hollowed, out currModel_Hollowed);
+            }
+
             #region Check for intersection
+
+
             //check if gears and shafts are not intersected with the hollowed model
+            foreach (var brep in allBreps)
+            {
+                Intersection.BrepBrep(brep, currModel_Hollowed, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out _);
+                if (intersectionCurves != null && intersectionCurves.Length > 0)
+                {
+                    RhinoApp.WriteLine("Fail to create a car parameter: gear/shaft intersects the model");
+                    RollBack();
+                    return false;
+                }
+            }
+
+
 
             //check if gears and shafts are intersected with other breps in the rhinoview
+            List<Brep> allBrepsInView = getAllBreps();
+            foreach (var brep in allBreps)
+            {
+                foreach (var brep2 in allBrepsInView)
+                {
+                    Intersection.BrepBrep(brep, brep2, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out _);
+                    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                    {
+                        RhinoApp.WriteLine("Fail to create a car parameter: gear/shaft intersects other parameters");
+                        RollBack();
+                        return false;
+                    }
+                }
+            }
 
             //check if gaskets are not intersected with the other breps in the rhinoview
+            foreach (var brep in allGaskets)
+            {
+                foreach (var brep2 in allBrepsInView)
+                {
+                    Intersection.BrepBrep(brep, brep2, myDoc.ModelAbsoluteTolerance, out Curve[] intersectionCurves, out _);
+                    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                    {
+                        RhinoApp.WriteLine("Fail to create a car parameter: gasket intersects other parameters");
+                        RollBack();
+                        return false;
+                    }
+                }
+            }
+
+
 
 
             #endregion
@@ -3680,7 +3738,7 @@ namespace DynaModel_v2.Final_Stage
             {
                 gaskets_guid.Add(myDoc.Objects.Add(brep));
             }
-                
+
 
             gasketCircles.AddRange(gasketCircles1);
 
