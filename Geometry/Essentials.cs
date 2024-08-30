@@ -24,7 +24,7 @@ namespace DynaModel_v2.Geometry
         private Plane cutterPlane;
         private double cutterThickness;
         private double speed = 1;
-        
+        private (SpurGear, Guid) choosedStartGear;
 
         
         
@@ -39,6 +39,8 @@ namespace DynaModel_v2.Geometry
         public Double Speed { get => speed; set => speed = value; }
 
         public Guid CurrModel { get => currModel; set => currModel = value; }
+
+        public (SpurGear, Guid) ChoosedStartGear { get => choosedStartGear; set => choosedStartGear = value; }
 
         public Essentials()
         {
