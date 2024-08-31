@@ -274,6 +274,23 @@ namespace DynaModel_v2.Final_Stage
             Point3d cuttedBrep2_1_centroid = VolumeMassProperties.Compute(cuttedBrep2[0]).Centroid;
             Point3d cuttedBrep2_2_centroid = VolumeMassProperties.Compute(cuttedBrep2[1]).Centroid;
 
+            //Make corresponding items into pairs
+            (Brep, Brep, Point3d, Point3d) pair1 = (null, null, Point3d.Unset, Point3d.Unset);
+            (Brep, Brep, Point3d, Point3d) pair2 = (null, null, Point3d.Unset, Point3d.Unset);
+
+            if (cuttedBrep1_1_centroid.DistanceTo(cuttedBrep2_1_centroid) < cuttedBrep1_1_centroid.DistanceTo(cuttedBrep2_2_centroid))
+            {
+                pair1 = (cuttedBrep[0], cuttedBrep2[0], cuttedBrep1_1_centroid, cuttedBrep2_1_centroid);
+                pair2 = (cuttedBrep[1], cuttedBrep2[1], cuttedBrep1_2_centroid, cuttedBrep2_2_centroid);
+            }
+            else
+            {
+                pair1 = (cuttedBrep[0], cuttedBrep2[1], cuttedBrep1_1_centroid, cuttedBrep2_2_centroid);
+                pair2 = (cuttedBrep[1], cuttedBrep2[0], cuttedBrep1_2_centroid, cuttedBrep2_1_centroid);
+            }
+
+            //Update current model -->To be implemented
+
             //Update current model
             if (cuttedBrep[0].GetVolume() - endEffector.GetVolume() < 10)
             {
