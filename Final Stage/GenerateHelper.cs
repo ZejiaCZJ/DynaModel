@@ -277,7 +277,6 @@ namespace DynaModel_v2.Final_Stage
             //Make corresponding items into pairs
             (Brep, Brep, Point3d, Point3d) pair1 = (null, null, Point3d.Unset, Point3d.Unset);
             (Brep, Brep, Point3d, Point3d) pair2 = (null, null, Point3d.Unset, Point3d.Unset);
-
             if (cuttedBrep1_1_centroid.DistanceTo(cuttedBrep2_1_centroid) < cuttedBrep1_1_centroid.DistanceTo(cuttedBrep2_2_centroid))
             {
                 pair1 = (cuttedBrep[0], cuttedBrep2[0], cuttedBrep1_1_centroid, cuttedBrep2_1_centroid);
@@ -290,80 +289,92 @@ namespace DynaModel_v2.Final_Stage
             }
 
             //Update current model -->To be implemented
-
-            //Update current model
-            if (cuttedBrep[0].GetVolume() - endEffector.GetVolume() < 10)
+            if(endEffector_centoid.DistanceTo(pair1.Item3) < endEffector_centoid.DistanceTo(pair2.Item3))
             {
-                currModel = cuttedBrep[1];
-
-                if (currModel.GetVolume() > endEffector.GetVolume())
-                {
-                    if (cuttedBrep2[0].GetVolume() > cuttedBrep2[1].GetVolume())
-                    {
-                        currModel_Hollowed = cuttedBrep2[0];
-                        endEffector_Hollowed = cuttedBrep2[1];
-                    }
-                    else
-                    {
-                        currModel_Hollowed = cuttedBrep2[1];
-                        endEffector_Hollowed = cuttedBrep2[0];
-                    }
-                }
-                else
-                {
-                    if (cuttedBrep2[0].GetVolume() > cuttedBrep2[0].GetVolume())
-                    {
-                        currModel_Hollowed = cuttedBrep2[1];
-                        endEffector_Hollowed = cuttedBrep2[0];
-                    }
-                    else
-                    {
-                        currModel_Hollowed = cuttedBrep2[0];
-                        endEffector_Hollowed = cuttedBrep2[1];
-                    }
-                }
+                endEffector_Hollowed = pair1.Item2;
+                currModel = pair2.Item1;
+                currModel_Hollowed = pair2.Item2;
             }
             else
             {
-                currModel = cuttedBrep[0];
-
-                if (cuttedBrep2.Length >= 2)
-                {
-                    if (currModel.GetVolume() > endEffector.GetVolume())
-                    {
-                        if (cuttedBrep2[0].GetVolume() > cuttedBrep2[1].GetVolume())
-                        {
-                            currModel_Hollowed = cuttedBrep2[0];
-                            endEffector_Hollowed = cuttedBrep2[1];
-                        }
-                        else
-                        {
-                            currModel_Hollowed = cuttedBrep2[1];
-                            endEffector_Hollowed = cuttedBrep2[0];
-                        }
-                    }
-                    else
-                    {
-                        if (cuttedBrep2[0].GetVolume() > cuttedBrep2[0].GetVolume())
-                        {
-                            currModel_Hollowed = cuttedBrep2[1];
-                            endEffector_Hollowed = cuttedBrep2[0];
-                        }
-                        else
-                        {
-                            currModel_Hollowed = cuttedBrep2[0];
-                            endEffector_Hollowed = cuttedBrep2[1];
-                        }
-                    }
-                }
-                else
-                {
-                    RhinoApp.WriteLine("This rotational motion item cannot be created. Due to impatible to other items");
-                    RollBack();
-                    return false;
-                }
-
+                endEffector_Hollowed = pair2.Item2;
+                currModel = pair1.Item1;
+                currModel_Hollowed = pair1.Item2;
             }
+
+            ////Update current model
+            //if (cuttedBrep[0].GetVolume() - endEffector.GetVolume() < 10)
+            //{
+            //    currModel = cuttedBrep[1];
+
+            //    if (currModel.GetVolume() > endEffector.GetVolume())
+            //    {
+            //        if (cuttedBrep2[0].GetVolume() > cuttedBrep2[1].GetVolume())
+            //        {
+            //            currModel_Hollowed = cuttedBrep2[0];
+            //            endEffector_Hollowed = cuttedBrep2[1];
+            //        }
+            //        else
+            //        {
+            //            currModel_Hollowed = cuttedBrep2[1];
+            //            endEffector_Hollowed = cuttedBrep2[0];
+            //        }
+            //    }
+            //    else
+            //    {
+            //        if (cuttedBrep2[0].GetVolume() > cuttedBrep2[0].GetVolume())
+            //        {
+            //            currModel_Hollowed = cuttedBrep2[1];
+            //            endEffector_Hollowed = cuttedBrep2[0];
+            //        }
+            //        else
+            //        {
+            //            currModel_Hollowed = cuttedBrep2[0];
+            //            endEffector_Hollowed = cuttedBrep2[1];
+            //        }
+            //    }
+            //}
+            //else
+            //{
+            //    currModel = cuttedBrep[0];
+
+            //    if (cuttedBrep2.Length >= 2)
+            //    {
+            //        if (currModel.GetVolume() > endEffector.GetVolume())
+            //        {
+            //            if (cuttedBrep2[0].GetVolume() > cuttedBrep2[1].GetVolume())
+            //            {
+            //                currModel_Hollowed = cuttedBrep2[0];
+            //                endEffector_Hollowed = cuttedBrep2[1];
+            //            }
+            //            else
+            //            {
+            //                currModel_Hollowed = cuttedBrep2[1];
+            //                endEffector_Hollowed = cuttedBrep2[0];
+            //            }
+            //        }
+            //        else
+            //        {
+            //            if (cuttedBrep2[0].GetVolume() > cuttedBrep2[0].GetVolume())
+            //            {
+            //                currModel_Hollowed = cuttedBrep2[1];
+            //                endEffector_Hollowed = cuttedBrep2[0];
+            //            }
+            //            else
+            //            {
+            //                currModel_Hollowed = cuttedBrep2[0];
+            //                endEffector_Hollowed = cuttedBrep2[1];
+            //            }
+            //        }
+            //    }
+            //    else
+            //    {
+            //        RhinoApp.WriteLine("This rotational motion item cannot be created. Due to impatible to other items");
+            //        RollBack();
+            //        return false;
+            //    }
+
+            //}
 
             myDoc.Objects.Delete(currModelObjId, true);
             myDoc.Views.Redraw();
