@@ -260,6 +260,7 @@ namespace DynaModel_v2.Final_Stage
                 RollBack();
                 return false;
             }
+            Point3d endEffector_centoid = VolumeMassProperties.Compute(endEffector).Centroid;
 
             Brep[] cuttedBrep = Brep.CreateBooleanDifference(currModel, cutter, myDoc.ModelAbsoluteTolerance, false);
             Brep[] cuttedBrep2 = Brep.CreateBooleanDifference(currModel_Hollowed, cutter, myDoc.ModelAbsoluteTolerance, false);
@@ -267,6 +268,11 @@ namespace DynaModel_v2.Final_Stage
 
             if (cuttedBrep.Length != 2)
                 return false;
+
+            Point3d cuttedBrep1_1_centroid = VolumeMassProperties.Compute(cuttedBrep[0]).Centroid;
+            Point3d cuttedBrep1_2_centroid = VolumeMassProperties.Compute(cuttedBrep[1]).Centroid;
+            Point3d cuttedBrep2_1_centroid = VolumeMassProperties.Compute(cuttedBrep2[0]).Centroid;
+            Point3d cuttedBrep2_2_centroid = VolumeMassProperties.Compute(cuttedBrep2[1]).Centroid;
 
             //Update current model
             if (cuttedBrep[0].GetVolume() - endEffector.GetVolume() < 10)
@@ -956,7 +962,7 @@ namespace DynaModel_v2.Final_Stage
                     distance = centroid.DistanceTo(new Point3d(mainModel.GetBoundingBox(true).Center.X, mainModel.GetBoundingBox(true).Center.Y, mainModel.GetBoundingBox(true).Min.Z)) / 2;
                     endEffector_rail = new Line(centroid, end_gear_dir, distance);
                     Curve endEffector_curve = endEffector_rail.ToNurbsCurve().Extend(CurveEnd.Start, CurveExtensionStyle.Line, new[] { endEffector_Hollowed });
-
+                    
                     //Connector Gear
                     Point3d connector_gear_centerPoint = new Point3d(endEffector_curve.PointAtStart.X, endEffector_curve.PointAtStart.Y, start_gear_centerPoint.Z);
                     Vector3d connector_gear_Direction = new Vector3d(0, 0, 1);

@@ -342,7 +342,7 @@ namespace DynaModel_v2.Rotational_Motion
                 myDoc.Views.Redraw();
                 #endregion
 
-                #region Ask which brep is the end effector and create gear train
+                //Ask which brep is the end effector and create gear train
                 ObjRef endEffector_ref;
                 rc = RhinoGet.GetOneObject("Select the end effector: ", false, ObjectType.Brep, out endEffector_ref);
                 if (rc == Rhino.Commands.Result.Success)
@@ -440,8 +440,8 @@ namespace DynaModel_v2.Rotational_Motion
                         end_gear_dir.Unitize();
 
                         unitized_end_gear_dir.Y = Math.Abs(unitized_end_gear_dir.Y);
-                    
-                        //we can just use spur gears for this end effector
+
+                        #region Method 1: we can just use spur gears for this end effector
                         if(unitized_end_gear_dir.Equals(start_gear.Direction))
                         {
                             Brep split = endEffector.Split(cutter, myDoc.ModelAbsoluteTolerance)[0];
@@ -829,6 +829,7 @@ namespace DynaModel_v2.Rotational_Motion
 
                             #endregion
 
+                            #region Display gears, shaft,  gasket
                             myDoc.Objects.Add(SavedItems.foundation.DuplicateBrep());
                             myDoc.Objects.Add(start_gear.Model.DuplicateBrep());
                             myDoc.Objects.Add(endEffector_shaft);
@@ -857,6 +858,7 @@ namespace DynaModel_v2.Rotational_Motion
                             {
                                 myDoc.Objects.Add(shaft);
                             }
+                            #endregion
 
                             DA.SetData(0, false);
                             Item savedItem = new Item();
@@ -867,6 +869,14 @@ namespace DynaModel_v2.Rotational_Motion
 
                             TrueOnlyButtonValueController.finished = 1;
                         }
+                        #endregion
+
+                        //#region method 2: we need to use a bevel gear set to transmit energy
+                        //else
+                        //{
+
+                        //}
+                        //#endregion
                     }
 
                     if (start_gear_ref.ObjectId == SavedItems.start_gear_horizontal_pair.Item2)
@@ -942,6 +952,7 @@ namespace DynaModel_v2.Rotational_Motion
                         myDoc.Views.Redraw();
                         #endregion
 
+                        #region Method 1: just use spur gear
                         if (end_gear_coneAngle == 180 || end_gear_coneAngle == 0)
                         {
                             Brep split = endEffector.Split(cutter, myDoc.ModelAbsoluteTolerance)[0];
@@ -1049,11 +1060,14 @@ namespace DynaModel_v2.Rotational_Motion
                                 myDoc.Objects.Add(second_driven_gear.Model);
                             }
                         }
+                        #endregion
+
+                        #region Method 2: use a bevel gear set
                         else
                         {
 
 
-                            #region if cone angle is greater than 90, use a special set of bevel gear ---------> To be implemented
+                            #region if cone angle is greater than 90, use a special set of bevel gear
                             bool isReversed = false;
                             if (end_gear_coneAngle > 90)
                             {
@@ -1079,6 +1093,13 @@ namespace DynaModel_v2.Rotational_Motion
                             int end_gear_teethNum = 15;
                             double end_gear_selfRotAngle = 0;
                             BevelGear end_gear = new BevelGear(end_gear_centerPoint, end_gear_Direction, end_gear_xDir, end_gear_teethNum, module, pressure_angle, thickness, end_gear_selfRotAngle, end_gear_coneAngle, false);
+                            if(end_gear.Model == null)
+                            {
+                                RhinoApp.WriteLine("Fail to create bevel gear");
+                                Cancel();
+                                return;
+                            }
+                            
                             #endregion
 
                             #region driven gear of end gear
@@ -1445,26 +1466,6 @@ namespace DynaModel_v2.Rotational_Motion
                             }
                             #endregion
 
-                            //#region Create movement space, shaft, and gaskets for gears
-                            ////Start gear
-                            //mainModel = Brep.CreateBooleanDifference(mainModel, start_gear_bBox.ToBrep(), myDoc.ModelAbsoluteTolerance, false)[0];
-
-
-                            ////Connector gear
-                            //mainModel = Brep.CreateBooleanDifference(mainModel, connector_gear.Boundingbox_big, myDoc.ModelAbsoluteTolerance, false)[0];
-
-                            ////Shaft of connector gear and first driven gear
-                            //myDoc.Objects.Add(shaft);
-                            //mainModel = Brep.CreateBooleanDifference(mainModel, shaft, myDoc.ModelAbsoluteTolerance, false)[0];
-                            //mainModel = Brep.CreateBooleanDifference(mainModel, shaft_clearance, myDoc.ModelAbsoluteTolerance, false)[0];
-
-
-                            ////First driven gear
-                            //mainModel = Brep.CreateBooleanDifference(mainModel, first_driven_gear.Boundingbox_big, myDoc.ModelAbsoluteTolerance, false)[0];
-
-                            ////End gear
-                            //mainModel = Brep.CreateBooleanDifference(mainModel, end_gear.Boundingbox_big, myDoc.ModelAbsoluteTolerance, false)[0];
-
                             GearSet bestGearSet = workable_gearsets[0];
                             foreach (var gearset in workable_gearsets)
                             {
@@ -1545,11 +1546,11 @@ namespace DynaModel_v2.Rotational_Motion
 
                             myDoc.Objects.Add(bestGearSet.Shaft);
                             myDoc.Objects.Add(bestGearSet.EndGearShaft);
-                            #endregion
 
                             #endregion
                         }
-                        //myDoc.Objects.Add(start_gear.Model);
+                        #endregion
+                        
                         DA.SetData(0, false);
                         Item savedItem = new Item();
                         savedItem.Name = "Rotational Motion";
