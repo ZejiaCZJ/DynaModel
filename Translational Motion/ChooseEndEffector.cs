@@ -572,7 +572,7 @@ namespace DynaModel_v2.Translational_Motion
                             intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
                             int count = 0;
                             Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                            while(intersectionCurves != null && intersectionCurves.Length > 0)
+                            while(intersectionCurves != null && intersectionCurves.Length > 0 && count < 360)
                             {
                                 connector_gear.Rotate(0.5);
                                 Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -582,7 +582,7 @@ namespace DynaModel_v2.Translational_Motion
                             {
                                 connector_gear.Rotate(2);
                                 Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                                while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 480)
                                 {
                                     connector_gear.Rotate(0.15);
                                     Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -594,7 +594,7 @@ namespace DynaModel_v2.Translational_Motion
                             intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
                             int count = 0;
                             Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                            while (intersectionCurves != null && intersectionCurves.Length > 0)
+                            while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 360)
                             {
                                 connector_gear.Rotate(0.5);
                                 Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -605,7 +605,7 @@ namespace DynaModel_v2.Translational_Motion
                             {
                                 connector_gear.Rotate(2);
                                 Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                                while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 480)
                                 {
                                     connector_gear.Rotate(0.1);
                                     Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -621,7 +621,7 @@ namespace DynaModel_v2.Translational_Motion
                             int count = 0;
 
                             Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                            while (intersectionCurves != null && intersectionCurves.Length > 0)
+                            while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 360)
                             {
                                 connector_gear.Rotate(0.5);
                                 Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
@@ -632,7 +632,7 @@ namespace DynaModel_v2.Translational_Motion
                             {
                                 connector_gear.Rotate(2);
                                 Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
-                                while (intersectionCurves != null && intersectionCurves.Length > 0)
+                                while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 480)
                                 {
                                     connector_gear.Rotate(0.1);
                                     Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
