@@ -299,6 +299,9 @@ namespace DynaModel_v2.Final_Stage
 
                         support_pillar_rail = support_pillar_rail.ExtendByLine(CurveEnd.End, new[] { generateHelper.currModel_Hollowed });
 
+                        if(support_pillar_rail == null)
+                            continue;
+
                         Brep supportPillar = Brep.CreatePipe(support_pillar_rail.ToNurbsCurve(), 1, true, PipeCapMode.Round, true, myDoc.ModelAbsoluteTolerance, myDoc.ModelAngleToleranceRadians)[0];
 
 

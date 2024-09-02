@@ -2355,19 +2355,194 @@ namespace DynaModel_v2.Final_Stage
             }
             else
             {
-                for (int i = 0; i < number_of_gear.Item1; i++)
+                //for (int i = 0; i < number_of_gear.Item1; i++)
+                //{
+                //    Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
+
+                //    start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
+                //    Point3d intermediate_centerPoint = start_gear_connection_rail.To;
+                //    intermediate_gear_xDir = start_gear_connection_rail.Direction;
+                //    SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+
+                //    intermediates_gears.Add(intermediate_gear);
+
+                //}
+
+                if (number_of_gear.Item1 != 1)
                 {
-                    Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
+                    Line start_gear_connection_rail = new Line();
+                    for (int i = 0; i < number_of_gear.Item1 - 1; i++)
+                    {
+                        start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
 
-                    start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
-                    Point3d intermediate_centerPoint = start_gear_connection_rail.To;
-                    intermediate_gear_xDir = start_gear_connection_rail.Direction;
-                    SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+                        start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
+                        Point3d intermediate_centerPoint = start_gear_connection_rail.To;
+                        intermediate_gear_xDir = start_gear_connection_rail.Direction;
+                        SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
 
-                    intermediates_gears.Add(intermediate_gear);
+                        intermediates_gears.Add(intermediate_gear);
+                    }
+
+                    tips_distance = (connector_gear.CenterPoint.DistanceTo(intermediates_gears[intermediates_gears.Count - 1].CenterPoint) - intermediates_gears[intermediates_gears.Count - 1].BaseRadius - connector_gear.BaseRadius) / 2;
+                    int teethNum = getNumTeeth(tips_distance);
+                    start_gear_connection_rail = new Line(intermediates_gears[intermediates_gears.Count - 1].CenterPoint, start_gear_connection_rail.Direction, intermediates_gears[intermediates_gears.Count - 1].BaseRadius + tips_distance);
+                    Point3d intermediate_centerPoint_temp = start_gear_connection_rail.To;
+                    SpurGear intermediate_gear_temp = new SpurGear(intermediate_centerPoint_temp, intermediate_gear_Direction, intermediate_gear_xDir, teethNum, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+
+                    intermediates_gears.Add(intermediate_gear_temp);
 
                 }
+                else
+                {
+                    for (int i = 0; i < number_of_gear.Item1; i++)
+                    {
+                        Line start_gear_connection_rail = new Line(start_gear.CenterPoint, connector_gear.CenterPoint);
 
+                        start_gear_connection_rail = new Line(start_gear.CenterPoint, start_gear_connection_rail.Direction, start_gear.BaseRadius + (i + 1) * getTipRadius(number_of_gear.Item2) + i * getBaseRadius(number_of_gear.Item2));
+                        Point3d intermediate_centerPoint = start_gear_connection_rail.To;
+                        intermediate_gear_xDir = start_gear_connection_rail.Direction;
+                        SpurGear intermediate_gear = new SpurGear(intermediate_centerPoint, intermediate_gear_Direction, intermediate_gear_xDir, number_of_gear.Item2, module, pressure_angle, thickness, intermediate_gear_selfRotAngle, false);
+
+                        intermediates_gears.Add(intermediate_gear);
+
+                    }
+                }
+
+
+                ////Make all gears match
+                //if (number_of_gear.Item1 == 1)
+                //{
+                //    intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
+                //    int count = 0;
+                //    Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                //    {
+                //        connector_gear.Rotate(0.5);
+                //        Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //        count++;
+                //    }
+                //    if (count > 0)
+                //    {
+                //        connector_gear.Rotate(2);
+                //        Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //        while (intersectionCurves != null && intersectionCurves.Length > 0)
+                //        {
+                //            connector_gear.Rotate(0.15);
+                //            Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //        }
+                //    }
+                //}
+                //if (number_of_gear.Item1 == 2)
+                //{
+                //    //intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
+                //    //int count = 0;
+                //    //Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                //    //{
+                //    //    connector_gear.Rotate(0.5);
+                //    //    Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //    count++;
+                //    //}
+
+                //    //if (count > 0)
+                //    //{
+                //    //    connector_gear.Rotate(2);
+                //    //    Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //    while (intersectionCurves != null && intersectionCurves.Length > 0)
+                //    //    {
+                //    //        connector_gear.Rotate(0.1);
+                //    //        Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //    }
+                //    //}
+                //    Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    if(intersectionCurves != null && intersectionCurves.Length > 0)
+                //    {
+                //        intermediates_gears[1].Rotate(360 / intermediates_gears[1].NumTeeth / 2);
+                //        intermediates_gears[0].Rotate(360 / intermediates_gears[1].NumTeeth / 2);
+                //    }
+
+                //    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                //    {
+                //        intermediates_gears[0].Rotate(360 / intermediates_gears[0].NumTeeth / 2);
+                //    }
+
+                //    int count = 0;
+                //    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                //    {
+                //        intermediates_gears[0].Rotate(1.3);
+                //        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //        count++;
+                //    }
+
+
+                //}
+                //if (number_of_gear.Item1 == 3)
+                //{
+                //    //intermediates_gears[0].Rotate(360 / number_of_gear.Item2 / 2);
+                //    //intermediates_gears[2].Rotate(360 / number_of_gear.Item2 / 2);
+
+                //    //int count = 0;
+
+                //    //Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                //    //{
+                //    //    connector_gear.Rotate(0.5);
+                //    //    Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //    count++;
+                //    //}
+
+                //    //if (count > 0)
+                //    //{
+                //    //    connector_gear.Rotate(2);
+                //    //    Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //    while (intersectionCurves != null && intersectionCurves.Length > 0)
+                //    //    {
+                //    //        connector_gear.Rotate(0.1);
+                //    //        Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    //    }
+                //    //}
+                //    Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                //    {
+                //        intermediates_gears[2].Rotate(360 / intermediates_gears[2].NumTeeth / 2);
+                //        intermediates_gears[1].Rotate(360 / intermediates_gears[2].NumTeeth / 2);
+                //        intermediates_gears[0].Rotate(360 / intermediates_gears[2].NumTeeth / 2);
+                //    }
+
+                //    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                //    {
+                //        intermediates_gears[1].Rotate(360 / intermediates_gears[1].NumTeeth / 2);
+                //        intermediates_gears[0].Rotate(360 / intermediates_gears[1].NumTeeth / 2);
+                //    }
+
+                //    int count = 0;
+                //    Intersection.BrepBrep(intermediates_gears[2].Model, intermediates_gears[1].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                //    {
+                //        intermediates_gears[1].Rotate(1.3);
+                //        intermediates_gears[0].Rotate(1.3);
+                //        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //        count++;
+                //    }
+
+                //    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    if (intersectionCurves != null && intersectionCurves.Length > 0)
+                //    {
+                //        intermediates_gears[0].Rotate(360 / intermediates_gears[0].NumTeeth / 2);
+                //    }
+
+                //    count = 0;
+                //    Intersection.BrepBrep(intermediates_gears[0].Model, intermediates_gears[1].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                //    {
+                //        intermediates_gears[0].Rotate(1.3);
+                //        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                //        count++;
+                //    }
+                //}
                 //Make all gears match
                 if (number_of_gear.Item1 == 1)
                 {
@@ -2386,8 +2561,15 @@ namespace DynaModel_v2.Final_Stage
                         Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                         while (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
-                            connector_gear.Rotate(0.15);
+                            connector_gear.Rotate(0.3);
                             Intersection.BrepBrep(intermediates_gears[0].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            if (count > 1000)
+                            {
+                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                RollBack();
+                                return false;
+                            }
+                            count++;
                         }
                     }
                 }
@@ -2409,8 +2591,43 @@ namespace DynaModel_v2.Final_Stage
                         Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                         while (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
-                            connector_gear.Rotate(0.1);
+                            connector_gear.Rotate(0.3);
                             Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            if (count > 1000)
+                            {
+                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                RollBack();
+                                return false;
+                            }
+                            count++;
+                        }
+                    }
+
+                    //Double check intermediate gear 0 and 1
+                    count = 0;
+                    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                    {
+                        connector_gear.Rotate(0.5);
+                        Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                        count++;
+                    }
+
+                    if (count > 0)
+                    {
+                        intermediates_gears[0].Rotate(2);
+                        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                        while (intersectionCurves != null && intersectionCurves.Length > 0)
+                        {
+                            connector_gear.Rotate(0.3);
+                            Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[0].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            if (count > 1000)
+                            {
+                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                RollBack();
+                                return false;
+                            }
+                            count++;
                         }
                     }
 
@@ -2436,8 +2653,45 @@ namespace DynaModel_v2.Final_Stage
                         Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
                         while (intersectionCurves != null && intersectionCurves.Length > 0)
                         {
-                            connector_gear.Rotate(0.1);
+                            connector_gear.Rotate(0.03);
                             Intersection.BrepBrep(intermediates_gears[2].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            if (count > 1000)
+                            {
+                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                RollBack();
+                                return false;
+                            }
+                            count++;
+                        }
+                    }
+
+                    //Double Check intermediates gear 1 and 2
+                    count = 0;
+                    Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                    while (intersectionCurves != null && intersectionCurves.Length > 0 && count < 720)
+                    {
+                        intermediates_gears[1].Rotate(0.5);
+                        intermediates_gears[0].Rotate(0.5);
+                        Intersection.BrepBrep(intermediates_gears[1].Model, connector_gear.Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                        count++;
+                    }
+
+                    if (count > 0)
+                    {
+                        intermediates_gears[0].Rotate(2);
+                        Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                        while (intersectionCurves != null && intersectionCurves.Length > 0)
+                        {
+                            intermediates_gears[1].Rotate(0.03);
+                            intermediates_gears[0].Rotate(0.03);
+                            Intersection.BrepBrep(intermediates_gears[1].Model, intermediates_gears[2].Model, myDoc.ModelAbsoluteTolerance, out intersectionCurves, out intersectionPoints);
+                            if (count > 1000)
+                            {
+                                RhinoApp.WriteLine("Failed to create intermediate gear, try again");
+                                RollBack();
+                                return false;
+                            }
+                            count++;
                         }
                     }
                 }
